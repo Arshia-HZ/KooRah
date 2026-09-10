@@ -2,6 +2,7 @@
 <Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:local="clr-namespace:KooRah.App"
-       x:Class="KooRah.App.AppShell">
+       x:Class="KooRah.App.AppShell"
+       FlowDirection="RightToLeft">
     <ShellContent ContentTemplate="{DataTemplate local:MainPage}" Route="MainPage" />
 </Shell>

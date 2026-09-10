@@ -95,6 +95,8 @@
             display: none;
             align-items: center;
             gap: 16px;
+            direction: rtl;
+            text-align: right;
             animation: slideDown 0.35s ease-out forwards;
         }
         .maneuver-banner.active {
@@ -123,6 +125,8 @@
             flex-direction: column;
             gap: 2px;
             overflow: hidden;
+            direction: rtl;
+            text-align: right;
         }
         .maneuver-distance {
             font-size: 13px;
@@ -140,10 +144,10 @@
             text-overflow: ellipsis;
         }
 
-        /* Floating Re-center Button (Google Maps Style: Centered directly above bottom sheet) */
+        /* Floating Re-center Button (Elevated safely above bottom route sheet) */
         .btn-recenter {
             position: absolute;
-            bottom: 134px;
+            bottom: 245px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 950;
@@ -161,6 +165,7 @@
             gap: 8px;
             cursor: pointer;
             white-space: nowrap;
+            direction: rtl;
             transition: transform 0.2s ease, background-color 0.2s ease;
         }
         .btn-recenter:hover {
@@ -176,10 +181,10 @@
             to { transform: translateX(-50%) scale(1); opacity: 1; }
         }
 
-        /* Floating 2D Controls (Bottom-Right, Clear of Bottom Sheet & Search) */
+        /* Floating 2D/3D & Layer Controls (Elevated above Bottom Route Sheet) */
         .floating-controls-right {
             position: absolute;
-            bottom: 125px;
+            bottom: 245px;
             right: 16px;
             z-index: 900;
             display: flex;
@@ -344,17 +349,17 @@
         <div id="maneuverBanner" class="maneuver-banner">
             <div id="maneuverIcon" class="maneuver-icon-box">⬆</div>
             <div class="maneuver-details">
-                <div id="maneuverDistance" class="maneuver-distance">Starting route</div>
-                <div id="maneuverStreet" class="maneuver-street">Follow the highlighted path</div>
+                <div id="maneuverDistance" class="maneuver-distance">شروع مسیر</div>
+                <div id="maneuverStreet" class="maneuver-street">مسیر مشخص‌شده را دنبال کنید</div>
             </div>
         </div>
 
-        <!-- Floating Re-center Button (Bottom-Left above bottom card) -->
+        <!-- Floating Re-center Button -->
         <button id="btnRecenter" class="btn-recenter" onclick="recenterMap()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
             </svg>
-            Re-center
+            مرکز نقشه
         </button>
 
         <!-- Floating 2D Controls (Bottom-Right, Clear of Search & Bottom Sheet) -->
@@ -880,9 +885,9 @@
                 var distEl = document.getElementById('maneuverDistance');
                 if (distEl && typeof distanceMeters === 'number') {
                     if (distanceMeters >= 1000) {
-                        distEl.innerText = 'In ' + (distanceMeters / 1000).toFixed(1) + ' km';
+                        distEl.innerText = 'در فاصله ' + (distanceMeters / 1000).toFixed(1) + ' کیلومتر';
                     } else {
-                        distEl.innerText = 'In ' + Math.round(distanceMeters) + ' m';
+                        distEl.innerText = 'در فاصله ' + Math.round(distanceMeters) + ' متر';
                     }
                 }
             }

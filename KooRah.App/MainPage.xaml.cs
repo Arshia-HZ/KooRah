@@ -23,9 +23,10 @@ public partial class MainPage : ContentPage
     private static readonly Color ColorMuted = Color.FromArgb("#8B96A3");
 
     private static readonly (double Lat, double Lon) FallbackAzadi = (35.6997, 51.3375);
-    private const string FallbackOriginTitle = "Azadi Square";
+    private const string FallbackOriginTitle = "میدان آزادی";
 
     private readonly GeocodingService _geocoding = new();
+    private readonly SavedPlacesService _savedPlaces = new();
     private readonly HttpClient _http = new();
 
     private RoadGraph? _graph;
@@ -54,17 +55,31 @@ public partial class MainPage : ContentPage
     private double _currentHeading = 0;
     private bool _isListeningLocation = false;
 
+    // Saved Places Modal State
+    private string _selectedCategoryIcon = "🏠";
+    private bool _saveFromGps = false;
+
     public MainPage()
     {
         InitializeComponent();
 
         OriginEntry.Text = _startTitle;
         DestinationEntry.Text = string.Empty;
+        ClearOriginButton.IsVisible = !string.IsNullOrWhiteSpace(_startTitle);
+        ClearDestinationButton.IsVisible = false;
+        SaveDestinationButton.IsEnabled = false;
+
         FindRouteButton.IsEnabled = false;
         FindRouteButton.Text = "مسیریابی";
         AlgorithmDetailsLabel.Text = "مقصد را انتخاب کنید";
 
+        _savedPlaces.SavedPlacesChanged += async (s, e) =>
+        {
+            await MainThread.InvokeOnMainThreadAsync(LoadSavedPlacesAsync);
+        };
+
         _ = LoadGraphAndLocationAsync();
+        _ = LoadSavedPlacesAsync();
     }
 
     private void SetStatus(string text, Color dotColor)
@@ -86,13 +101,13 @@ public partial class MainPage : ContentPage
     {
         try
         {
-            SetStatus("Loading road network...", ColorMuted);
+            SetStatus("بارگذاری شبکه معابر...", ColorMuted);
             var localPbfPath = await EnsureLocalCopyAsync("tehran.osm.pbf");
 
-            SetStatus("Building road graph...", ColorMuted);
+            SetStatus("ساخت گراف ناوبری...", ColorMuted);
             _graph = await Task.Run(() => OsmGraphBuilder.BuildFromPbf(localPbfPath));
 
-            SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
+            SetStatus($"آماده — {_graph.Nodes.Count:N0} تقاطع", ColorTurquoise);
 
             if (_endCoord.HasValue)
             {
@@ -107,7 +122,7 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            SetStatus("Failed to load graph", ColorAmber);
+            SetStatus("خطا در بارگذاری نقشه", ColorAmber);
             WarningLabel.Text = ex.Message;
             WarningLabel.IsVisible = true;
         }
@@ -136,7 +151,7 @@ public partial class MainPage : ContentPage
                     _lastLon = location.Longitude;
 
                     var placeName = await _geocoding.ReverseGeocodeAsync(location.Latitude, location.Longitude);
-                    _startTitle = !string.IsNullOrWhiteSpace(placeName) ? placeName : "My Current Location";
+                    _startTitle = !string.IsNullOrWhiteSpace(placeName) ? placeName : "موقعیت فعلی من";
                     detected = true;
                 }
             }
@@ -156,6 +171,7 @@ public partial class MainPage : ContentPage
 
         _isProgrammaticTextChange = true;
         OriginEntry.Text = _startTitle;
+        ClearOriginButton.IsVisible = !string.IsNullOrWhiteSpace(_startTitle);
         _isProgrammaticTextChange = false;
 
         // Render the single local tile around the detected origin
@@ -169,7 +185,7 @@ public partial class MainPage : ContentPage
             await StopNavigationAsync();
         }
 
-        SetStatus("Locating via GPS...", ColorAmber);
+        SetStatus("دریافت موقعیت با GPS...", ColorAmber);
         LocateMeButton.IsEnabled = false;
 
         await DetectUserLocationAsync();
@@ -177,7 +193,7 @@ public partial class MainPage : ContentPage
         LocateMeButton.IsEnabled = true;
         if (_graph != null)
         {
-            SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
+            SetStatus($"آماده — {_graph.Nodes.Count:N0} تقاطع", ColorTurquoise);
         }
     }
 
@@ -195,6 +211,8 @@ public partial class MainPage : ContentPage
 
     private void OnOriginTextChanged(object? sender, TextChangedEventArgs e)
     {
+        ClearOriginButton.IsVisible = !string.IsNullOrWhiteSpace(e.NewTextValue);
+
         if (_isProgrammaticTextChange) return;
         _isSearchingOrigin = true;
 
@@ -214,6 +232,9 @@ public partial class MainPage : ContentPage
 
     private void OnDestinationTextChanged(object? sender, TextChangedEventArgs e)
     {
+        ClearDestinationButton.IsVisible = !string.IsNullOrWhiteSpace(e.NewTextValue);
+        SaveDestinationButton.IsEnabled = !string.IsNullOrWhiteSpace(e.NewTextValue) && _endCoord.HasValue;
+
         if (_isProgrammaticTextChange) return;
         _isSearchingOrigin = false;
 
@@ -225,11 +246,91 @@ public partial class MainPage : ContentPage
             }
             _endCoord = null;
             _endTitle = string.Empty;
+            SaveDestinationButton.IsEnabled = false;
             ResetToIdleState();
             _ = ShowEmptyMapAsync();
         }
 
         TriggerSearchDebounced(e.NewTextValue);
+    }
+
+    private void OnClearOriginClicked(object? sender, EventArgs e)
+    {
+        if (_navState == NavState.Navigating)
+        {
+            _ = StopNavigationAsync();
+        }
+        _isProgrammaticTextChange = true;
+        OriginEntry.Text = string.Empty;
+        ClearOriginButton.IsVisible = false;
+        _isProgrammaticTextChange = false;
+
+        _startCoord = FallbackAzadi;
+        _startTitle = FallbackOriginTitle;
+        ResetToIdleState();
+        _ = ShowEmptyMapAsync();
+    }
+
+    private void OnClearDestinationClicked(object? sender, EventArgs e)
+    {
+        if (_navState == NavState.Navigating)
+        {
+            _ = StopNavigationAsync();
+        }
+        _isProgrammaticTextChange = true;
+        DestinationEntry.Text = string.Empty;
+        ClearDestinationButton.IsVisible = false;
+        SaveDestinationButton.IsEnabled = false;
+        _isProgrammaticTextChange = false;
+
+        _endCoord = null;
+        _endTitle = string.Empty;
+        ResetToIdleState();
+        _ = ShowEmptyMapAsync();
+    }
+
+    private async void OnSwapEndpointsClicked(object? sender, EventArgs e)
+    {
+        if (_navState == NavState.Navigating)
+        {
+            await StopNavigationAsync();
+        }
+
+        if (!_endCoord.HasValue)
+        {
+            // If destination is empty, make current origin the destination and detect GPS as origin
+            _endCoord = _startCoord;
+            _endTitle = _startTitle;
+            _startCoord = FallbackAzadi;
+            _startTitle = FallbackOriginTitle;
+        }
+        else
+        {
+            var tempCoord = _startCoord;
+            var tempTitle = _startTitle;
+
+            _startCoord = _endCoord.Value;
+            _startTitle = _endTitle;
+
+            _endCoord = tempCoord;
+            _endTitle = tempTitle;
+        }
+
+        _isProgrammaticTextChange = true;
+        OriginEntry.Text = _startTitle;
+        DestinationEntry.Text = _endTitle;
+        ClearOriginButton.IsVisible = !string.IsNullOrWhiteSpace(_startTitle);
+        ClearDestinationButton.IsVisible = !string.IsNullOrWhiteSpace(_endTitle);
+        SaveDestinationButton.IsEnabled = _endCoord.HasValue;
+        _isProgrammaticTextChange = false;
+
+        ResetToIdleState();
+        await ShowEmptyMapAsync();
+
+        if (_graph != null && _endCoord.HasValue)
+        {
+            OnFindRouteClicked(sender, e);
+        }
     }
 
     private void ResetToIdleState()
@@ -249,6 +350,7 @@ public partial class MainPage : ContentPage
             ? "گزینه مسیریابی را انتخاب کنید"
             : "مقصد را انتخاب کنید";
 
+        RouteBadgesLayout.IsVisible = false;
         OverviewPanel.IsVisible = true;
         ActiveNavPanel.IsVisible = false;
         TopSearchCard.IsVisible = true;
@@ -300,12 +402,15 @@ public partial class MainPage : ContentPage
             _startCoord = (selected.Latitude, selected.Longitude);
             _startTitle = selected.Name;
             OriginEntry.Text = selected.Name;
+            ClearOriginButton.IsVisible = true;
         }
         else
         {
             _endCoord = (selected.Latitude, selected.Longitude);
             _endTitle = selected.Name;
             DestinationEntry.Text = selected.Name;
+            ClearDestinationButton.IsVisible = true;
+            SaveDestinationButton.IsEnabled = true;
         }
         _isProgrammaticTextChange = false;
 
@@ -317,6 +422,252 @@ public partial class MainPage : ContentPage
 
         // Re-center map with updated endpoints
         _ = ShowEmptyMapAsync();
+    }
+
+    private async void OnBookmarkSuggestionClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button { BindingContext: PlaceSearchResult res })
+        {
+            await _savedPlaces.SavePlaceAsync(res.Name, res.DisplayAddress, res.Latitude, res.Longitude, "⭐");
+            SetStatus($"مکان ذخیره شد: {res.Name}", ColorTurquoise);
+            await LoadSavedPlacesAsync();
+        }
+    }
+
+    #endregion
+
+    #region Saved Places Management & Quick Chips
+
+    private async Task LoadSavedPlacesAsync()
+    {
+        var places = await _savedPlaces.GetSavedPlacesAsync();
+
+        SavedPlacesCollectionView.ItemsSource = places;
+        SavedPlacesChipsLayout.Children.Clear();
+
+        // 1. Add "+ جدید" shortcut chip button
+        var addChip = new Button
+        {
+            Text = "➕ جدید",
+            FontFamily = "Manrope",
+            FontSize = 11,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = ColorTurquoise,
+            BackgroundColor = Color.FromArgb("#151D25"),
+            BorderColor = Color.FromArgb("#26313E"),
+            BorderWidth = 1,
+            CornerRadius = 12,
+            HeightRequest = 32,
+            Padding = new Thickness(10, 0)
+        };
+        addChip.Clicked += (s, e) => OnOpenSavedPlacesModalClicked(s, e);
+        SavedPlacesChipsLayout.Children.Add(addChip);
+
+        // 2. Add dynamic chips for each saved place
+        foreach (var place in places)
+        {
+            var chip = new Button
+            {
+                Text = place.FormattedChipText,
+                BindingContext = place,
+                FontFamily = "Manrope",
+                FontSize = 11,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#EDEFF2"),
+                BackgroundColor = Color.FromArgb("#151D25"),
+                BorderColor = Color.FromArgb("#26313E"),
+                BorderWidth = 1,
+                CornerRadius = 12,
+                HeightRequest = 32,
+                Padding = new Thickness(10, 0)
+            };
+            chip.Clicked += OnSavedPlaceChipClicked;
+            SavedPlacesChipsLayout.Children.Add(chip);
+        }
+    }
+
+    private void OnSavedPlaceChipClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button { BindingContext: SavedPlace place })
+        {
+            if (_navState == NavState.Navigating)
+            {
+                _ = StopNavigationAsync();
+            }
+
+            _endCoord = (place.Latitude, place.Longitude);
+            _endTitle = place.Label;
+
+            _isProgrammaticTextChange = true;
+            DestinationEntry.Text = place.Label;
+            ClearDestinationButton.IsVisible = true;
+            SaveDestinationButton.IsEnabled = true;
+            _isProgrammaticTextChange = false;
+
+            ResetToIdleState();
+            _ = ShowEmptyMapAsync();
+
+            if (_graph != null)
+            {
+                OnFindRouteClicked(sender, e);
+            }
+        }
+    }
+
+    private void OnOpenSavedPlacesModalClicked(object? sender, EventArgs e)
+    {
+        NewPlaceLabelEntry.Text = !string.IsNullOrWhiteSpace(_endTitle) ? _endTitle : "";
+        SavedPlacesModal.IsVisible = true;
+        _ = LoadSavedPlacesAsync();
+    }
+
+    private void OnCloseSavedPlacesClicked(object? sender, EventArgs e)
+    {
+        SavedPlacesModal.IsVisible = false;
+    }
+
+    private void OnIconOptionClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button btn)
+        {
+            _selectedCategoryIcon = btn.Text;
+
+            foreach (var child in IconPickerLayout.Children)
+            {
+                if (child is Button b)
+                {
+                    if (b == btn)
+                    {
+                        b.BorderColor = ColorTurquoise;
+                        b.BorderWidth = 1.5;
+                        b.BackgroundColor = Color.FromArgb("#222C38");
+                    }
+                    else
+                    {
+                        b.BorderColor = Color.FromArgb("#2E3B4B");
+                        b.BorderWidth = 1;
+                        b.BackgroundColor = Color.FromArgb("#171F27");
+                    }
+                }
+            }
+        }
+    }
+
+    private void OnSourceDestinationClicked(object? sender, EventArgs e)
+    {
+        _saveFromGps = false;
+        SourceDestinationButton.BorderColor = ColorTurquoise;
+        SourceDestinationButton.BorderWidth = 1.5;
+        SourceDestinationButton.TextColor = Color.FromArgb("#EDEFF2");
+        SourceDestinationButton.BackgroundColor = Color.FromArgb("#222C38");
+
+        SourceGpsButton.BorderColor = Color.FromArgb("#2E3B4B");
+        SourceGpsButton.BorderWidth = 1;
+        SourceGpsButton.TextColor = ColorMuted;
+        SourceGpsButton.BackgroundColor = Color.FromArgb("#171F27");
+    }
+
+    private void OnSourceGpsClicked(object? sender, EventArgs e)
+    {
+        _saveFromGps = true;
+        SourceGpsButton.BorderColor = ColorTurquoise;
+        SourceGpsButton.BorderWidth = 1.5;
+        SourceGpsButton.TextColor = Color.FromArgb("#EDEFF2");
+        SourceGpsButton.BackgroundColor = Color.FromArgb("#222C38");
+
+        SourceDestinationButton.BorderColor = Color.FromArgb("#2E3B4B");
+        SourceDestinationButton.BorderWidth = 1;
+        SourceDestinationButton.TextColor = ColorMuted;
+        SourceDestinationButton.BackgroundColor = Color.FromArgb("#171F27");
+    }
+
+    private async void OnConfirmSaveNewPlaceClicked(object? sender, EventArgs e)
+    {
+        var label = NewPlaceLabelEntry.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            label = "مکان ذخیره‌شده";
+        }
+
+        double lat;
+        double lon;
+        string address;
+
+        if (_saveFromGps)
+        {
+            lat = _startCoord.Lat;
+            lon = _startCoord.Lon;
+            address = _startTitle;
+        }
+        else if (_endCoord.HasValue)
+        {
+            lat = _endCoord.Value.Lat;
+            lon = _endCoord.Value.Lon;
+            address = _endTitle;
+        }
+        else
+        {
+            lat = _startCoord.Lat;
+            lon = _startCoord.Lon;
+            address = _startTitle;
+        }
+
+        await _savedPlaces.SavePlaceAsync(label, address, lat, lon, _selectedCategoryIcon);
+        NewPlaceLabelEntry.Text = string.Empty;
+        SavedPlacesModal.IsVisible = false;
+
+        SetStatus($"مکان با موفقیت ذخیره شد: {label}", ColorTurquoise);
+        await LoadSavedPlacesAsync();
+    }
+
+    private void OnSaveCurrentDestinationClicked(object? sender, EventArgs e)
+    {
+        if (_endCoord.HasValue)
+        {
+            NewPlaceLabelEntry.Text = _endTitle;
+            OnSourceDestinationClicked(sender, e);
+            SavedPlacesModal.IsVisible = true;
+        }
+    }
+
+    private void OnNavigateToSavedPlaceClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button { BindingContext: SavedPlace place })
+        {
+            SavedPlacesModal.IsVisible = false;
+
+            if (_navState == NavState.Navigating)
+            {
+                _ = StopNavigationAsync();
+            }
+
+            _endCoord = (place.Latitude, place.Longitude);
+            _endTitle = place.Label;
+
+            _isProgrammaticTextChange = true;
+            DestinationEntry.Text = place.Label;
+            ClearDestinationButton.IsVisible = true;
+            SaveDestinationButton.IsEnabled = true;
+            _isProgrammaticTextChange = false;
+
+            ResetToIdleState();
+            _ = ShowEmptyMapAsync();
+
+            if (_graph != null)
+            {
+                OnFindRouteClicked(sender, e);
+            }
+        }
+    }
+
+    private async void OnDeleteSavedPlaceClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button { BindingContext: SavedPlace place })
+        {
+            await _savedPlaces.DeletePlaceAsync(place.Id);
+            SetStatus($"مکان حذف شد: {place.Label}", ColorAmber);
+            await LoadSavedPlacesAsync();
+        }
     }
 
     #endregion
@@ -344,7 +695,7 @@ public partial class MainPage : ContentPage
         SuggestionsBorder.IsVisible = false;
         FindRouteButton.IsEnabled = false;
         WarningLabel.IsVisible = false;
-        SetStatus("Finding candidate route...", ColorMuted);
+        SetStatus("جستجوی کاندیدای مسیر...", ColorMuted);
 
         var graph = _graph;
         var start = graph.FindNearestNode(_startCoord.Lat, _startCoord.Lon);
@@ -356,14 +707,14 @@ public partial class MainPage : ContentPage
         var (initial, _) = await Task.Run(() => comparer.FindBestRoute(graph, start.Id, end.Id));
         if (initial is null)
         {
-            SetStatus("No route found", ColorAmber);
-            WarningLabel.Text = "No navigable path found between coordinates.";
+            SetStatus("مسیری یافت نشد", ColorAmber);
+            WarningLabel.Text = "هیچ مسیر معتبری بین این دو نقطه پیدا نشد.";
             WarningLabel.IsVisible = true;
             FindRouteButton.IsEnabled = true;
             return;
         }
 
-        SetStatus("Updating live traffic...", ColorAmber);
+        SetStatus("دریافت ترافیک زنده TomTom...", ColorAmber);
         var apiKey = await AppSecrets.GetTomTomApiKeyAsync();
         var traffic = new TomTomTrafficProvider(apiKey);
         var candidateEdges = ResolveEdges(graph, initial.NodePath);
@@ -374,13 +725,13 @@ public partial class MainPage : ContentPage
             catch { /* keep free-flow speed on edge if call fails */ }
         }
 
-        SetStatus("Racing algorithms...", ColorMuted);
+        SetStatus("محاسبه سریع‌ترین مسیر با الگوریتم‌های هوشمند...", ColorMuted);
         var (best, all) = await Task.Run(() => comparer.FindBestRoute(graph, start.Id, end.Id));
 
         if (best is null)
         {
-            SetStatus("Routing failed", ColorAmber);
-            WarningLabel.Text = "Could not compute route with current traffic conditions.";
+            SetStatus("مسیریابی ناموفق", ColorAmber);
+            WarningLabel.Text = "محاسبه مسیر در شرایط فعلی ترافیک میسر نشد.";
             WarningLabel.IsVisible = true;
             FindRouteButton.IsEnabled = true;
             return;
@@ -391,20 +742,22 @@ public partial class MainPage : ContentPage
 
         // Display results according to night-driving design specs:
         var etaMinutes = Math.Max(1, (int)Math.Round(best.TotalTravelTimeSeconds / 60.0));
-        EtaLabel.Text = $"{etaMinutes} min";
-        DistanceLabel.Text = $"{best.TotalDistanceMeters / 1000.0:F1} km";
+        EtaLabel.Text = $"{etaMinutes} دقیقه";
+        DistanceLabel.Text = $"{best.TotalDistanceMeters / 1000.0:F1} کیلومتر";
 
-        AlgorithmDetailsLabel.Text = $"{best.AlgorithmName} · {best.ComputeTime.TotalMilliseconds:F1}ms";
-        SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
+        AlgorithmDetailsLabel.Text = $"{best.AlgorithmName} · {best.ComputeTime.TotalMilliseconds:F1} میلی‌ثانیه";
+        SetStatus($"آماده — {_graph.Nodes.Count:N0} تقاطع", ColorTurquoise);
 
+        RouteBadgesLayout.IsVisible = true;
         await DrawRouteAsync(graph, best.NodePath);
 
         // Transition to RouteCalculated state
         _navState = NavState.RouteCalculated;
-        FindRouteButton.Text = "▶ Start Navigation";
+        FindRouteButton.Text = "▶ شروع ناوبری";
         FindRouteButton.BackgroundColor = ColorTurquoise;
         FindRouteButton.TextColor = Color.FromArgb("#10151B");
         FindRouteButton.IsEnabled = true;
+        SaveDestinationButton.IsEnabled = true;
     }
 
     private async Task StartNavigationAsync()
@@ -421,11 +774,11 @@ public partial class MainPage : ContentPage
         {
             var etaMinutes = Math.Max(1, (int)Math.Round(_lastBestRoute.TotalTravelTimeSeconds / 60.0));
             var arrival = DateTime.Now.AddSeconds(_lastBestRoute.TotalTravelTimeSeconds).ToString("h:mm tt");
-            NavEtaLabel.Text = $"{etaMinutes} min";
-            NavDetailsLabel.Text = $"{_lastBestRoute.TotalDistanceMeters / 1000.0:F1} km • {arrival}";
+            NavEtaLabel.Text = $"{etaMinutes} دقیقه";
+            NavDetailsLabel.Text = $"{_lastBestRoute.TotalDistanceMeters / 1000.0:F1} کیلومتر • {arrival}";
         }
 
-        SetStatus("3D Follow Navigation Active", ColorTurquoise);
+        SetStatus("ناوبری سه‌بعدی فعال", ColorTurquoise);
 
         // Tell map to enter 3D driver mode
         try
@@ -451,11 +804,11 @@ public partial class MainPage : ContentPage
         OverviewPanel.IsVisible = true;
         RecenterButton.IsVisible = false;
 
-        FindRouteButton.Text = "▶ Start Navigation";
+        FindRouteButton.Text = "▶ شروع ناوبری";
         FindRouteButton.BackgroundColor = ColorTurquoise;
         FindRouteButton.TextColor = Color.FromArgb("#10151B");
 
-        SetStatus($"Ready — {_graph?.Nodes.Count:N0} nodes", ColorTurquoise);
+        SetStatus($"آماده — {_graph?.Nodes.Count:N0} تقاطع", ColorTurquoise);
 
         try
         {
@@ -604,7 +957,7 @@ public partial class MainPage : ContentPage
         double remainingDistMeters = 0;
         double remainingSeconds = 0;
         string maneuver = "straight";
-        string nextStreet = "Destination";
+        string nextStreet = "مقصد";
 
         if (_graph != null && _lastNodePath != null && _lastNodePath.Count > 1)
         {
@@ -636,7 +989,7 @@ public partial class MainPage : ContentPage
             // Determine next maneuver at upcoming node
             var (maneuverType, streetName) = ExtractUpcomingManeuver(_graph, _lastNodePath, segmentIdx);
             maneuver = maneuverType;
-            nextStreet = !string.IsNullOrWhiteSpace(streetName) ? streetName : "Next Street";
+            nextStreet = !string.IsNullOrWhiteSpace(streetName) ? streetName : "مسیر پیش‌رو";
         }
         else if (_endCoord.HasValue)
         {
@@ -650,8 +1003,8 @@ public partial class MainPage : ContentPage
         // 3. Push to WebView
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            NavEtaLabel.Text = $"{etaMinutes} min";
-            NavDetailsLabel.Text = $"{remainingDistMeters / 1000.0:F1} km • {arrivalFormatted}";
+            NavEtaLabel.Text = $"{etaMinutes} دقیقه";
+            NavDetailsLabel.Text = $"{remainingDistMeters / 1000.0:F1} کیلومتر • {arrivalFormatted}";
 
             try
             {
@@ -750,7 +1103,7 @@ public partial class MainPage : ContentPage
     {
         if (segmentIdx >= nodePath.Count - 2)
         {
-            return ("straight", "Destination");
+            return ("straight", "مقصد");
         }
 
         var n0 = graph.Nodes[nodePath[segmentIdx]];
@@ -763,21 +1116,21 @@ public partial class MainPage : ContentPage
         double delta = (b2 - b1 + 540) % 360 - 180;
 
         string maneuver = "straight";
-        string instruction = "Continue along route";
+        string instruction = "ادامه در مسیر";
         if (delta > 35)
         {
             maneuver = "right";
-            instruction = "Turn right at next turn";
+            instruction = "گردش به راست در تقاطع بعد";
         }
         else if (delta < -35)
         {
             maneuver = "left";
-            instruction = "Turn left at next turn";
+            instruction = "گردش به چپ در تقاطع بعد";
         }
         else if (delta > 130 || delta < -130)
         {
             maneuver = "uturn";
-            instruction = "Make a U-turn";
+            instruction = "دور زدن در دوربرگردان";
         }
 
         return (maneuver, instruction);
