@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using KooRah.App.Services;
 using KooRah.Core.Models;
 using KooRah.Core.Osm;
 using KooRah.Core.Routing;
@@ -12,26 +13,49 @@ public partial class MainPage : ContentPage
 {
     private const string TomTomApiKey = "YOUR_API_KEY";
 
-    private static readonly (double Lat, double Lon) StartCoord = (35.7219, 51.3347); // Azadi
-    private static readonly (double Lat, double Lon) EndCoord = (35.6997, 51.3380);
-
     private static readonly Color ColorTurquoise = Color.FromArgb("#23A6A0");
     private static readonly Color ColorAmber = Color.FromArgb("#E0A458");
     private static readonly Color ColorMuted = Color.FromArgb("#8B96A3");
 
-    private RoadGraph? _graph;
+    private readonly GeocodingService _geocoding = new();
     private readonly HttpClient _http = new();
+
+    private RoadGraph? _graph;
+
+    // Current routing endpoints (defaults: Azadi to Tajrish)
+    private (double Lat, double Lon) _startCoord = (35.6997, 51.3375); // Azadi
+    private string _startTitle = "Azadi Square";
+
+    private (double Lat, double Lon) _endCoord = (35.8049, 51.4410); // Tajrish
+    private string _endTitle = "Tajrish";
+
+    private bool _isSearchingOrigin = false;
+    private CancellationTokenSource? _searchCts;
+    private bool _isProgrammaticTextChange = false;
 
     public MainPage()
     {
         InitializeComponent();
-        _ = LoadGraphAsync();
+
+        OriginEntry.Text = _startTitle;
+        DestinationEntry.Text = _endTitle;
+
+        _ = LoadGraphAndLocationAsync();
     }
 
     private void SetStatus(string text, Color dotColor)
     {
         StatusLabel.Text = text;
         StatusDot.Fill = new SolidColorBrush(dotColor);
+    }
+
+    private async Task LoadGraphAndLocationAsync()
+    {
+        // 1. Start loading road network in background
+        _ = LoadGraphAsync();
+
+        // 2. Concurrently detect user's current GPS location as default origin
+        await DetectUserLocationAsync();
     }
 
     private async Task LoadGraphAsync()
@@ -58,21 +82,169 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private async Task DetectUserLocationAsync()
+    {
+        try
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+            }
+
+            if (status == PermissionStatus.Granted)
+            {
+                var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5));
+                var location = await Geolocation.Default.GetLocationAsync(request);
+
+                if (location != null)
+                {
+                    _startCoord = (location.Latitude, location.Longitude);
+
+                    var placeName = await _geocoding.ReverseGeocodeAsync(location.Latitude, location.Longitude);
+                    _startTitle = !string.IsNullOrWhiteSpace(placeName) ? placeName : "My Current Location";
+
+                    _isProgrammaticTextChange = true;
+                    OriginEntry.Text = _startTitle;
+                    _isProgrammaticTextChange = false;
+
+                    await ShowEmptyMapAsync();
+                    return;
+                }
+            }
+        }
+        catch
+        {
+            // Geolocation unavailable or unsupported on desktop platform; keep fallback
+        }
+
+        // Fallback default origin
+        _isProgrammaticTextChange = true;
+        OriginEntry.Text = _startTitle;
+        _isProgrammaticTextChange = false;
+    }
+
+    private async void OnLocateMeClicked(object? sender, EventArgs e)
+    {
+        SetStatus("Locating via GPS...", ColorAmber);
+        LocateMeButton.IsEnabled = false;
+
+        await DetectUserLocationAsync();
+
+        LocateMeButton.IsEnabled = true;
+        if (_graph != null)
+        {
+            SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
+        }
+    }
+
+    #region Search & Autocomplete Handlers
+
+    private void OnOriginFocused(object? sender, FocusEventArgs e)
+    {
+        _isSearchingOrigin = true;
+    }
+
+    private void OnDestinationFocused(object? sender, FocusEventArgs e)
+    {
+        _isSearchingOrigin = false;
+    }
+
+    private void OnOriginTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isProgrammaticTextChange) return;
+        _isSearchingOrigin = true;
+        TriggerSearchDebounced(e.NewTextValue);
+    }
+
+    private void OnDestinationTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isProgrammaticTextChange) return;
+        _isSearchingOrigin = false;
+        TriggerSearchDebounced(e.NewTextValue);
+    }
+
+    private void TriggerSearchDebounced(string query)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var ct = _searchCts.Token;
+
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+        {
+            SuggestionsBorder.IsVisible = false;
+            return;
+        }
+
+        Task.Delay(350, ct).ContinueWith(async _ =>
+        {
+            if (ct.IsCancellationRequested) return;
+
+            var results = await _geocoding.SearchPlacesAsync(query, ct);
+            if (ct.IsCancellationRequested) return;
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (results.Count > 0)
+                {
+                    SuggestionsCollection.ItemsSource = results;
+                    SuggestionsBorder.IsVisible = true;
+                }
+                else
+                {
+                    SuggestionsBorder.IsVisible = false;
+                }
+            });
+        }, TaskScheduler.Default);
+    }
+
+    private void OnSuggestionSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection.FirstOrDefault() is not PlaceSearchResult selected)
+            return;
+
+        _isProgrammaticTextChange = true;
+        if (_isSearchingOrigin)
+        {
+            _startCoord = (selected.Latitude, selected.Longitude);
+            _startTitle = selected.Name;
+            OriginEntry.Text = selected.Name;
+        }
+        else
+        {
+            _endCoord = (selected.Latitude, selected.Longitude);
+            _endTitle = selected.Name;
+            DestinationEntry.Text = selected.Name;
+        }
+        _isProgrammaticTextChange = false;
+
+        SuggestionsBorder.IsVisible = false;
+        SuggestionsCollection.SelectedItem = null;
+
+        // Re-center map to the new endpoints
+        _ = ShowEmptyMapAsync();
+    }
+
+    #endregion
+
+    #region Route Calculation
+
     private async void OnFindRouteClicked(object? sender, EventArgs e)
     {
         if (_graph is null) return;
 
+        SuggestionsBorder.IsVisible = false;
         FindRouteButton.IsEnabled = false;
         WarningLabel.IsVisible = false;
         SetStatus("Finding candidate route...", ColorMuted);
 
         var graph = _graph;
-        var start = graph.FindNearestNode(StartCoord.Lat, StartCoord.Lon);
-        var end = graph.FindNearestNode(EndCoord.Lat, EndCoord.Lon);
+        var start = graph.FindNearestNode(_startCoord.Lat, _startCoord.Lon);
+        var end = graph.FindNearestNode(_endCoord.Lat, _endCoord.Lon);
 
         var comparer = new RouteComparer();
 
-        // Initial pass (free-flow speeds) just to know which edges to refresh traffic on.
+        // Initial pass (free-flow speeds) to determine candidate route edges
         var (initial, _) = await Task.Run(() => comparer.FindBestRoute(graph, start.Id, end.Id));
         if (initial is null)
         {
@@ -90,7 +262,7 @@ public partial class MainPage : ContentPage
         foreach (var edge in candidateEdges)
         {
             try { await traffic.UpdateEdgeSpeedAsync(edge, _http); }
-            catch { /* keep free-flow speed for this edge if the call fails */ }
+            catch { /* keep free-flow speed on edge if call fails */ }
         }
 
         SetStatus("Racing algorithms...", ColorMuted);
@@ -130,6 +302,10 @@ public partial class MainPage : ContentPage
         return edges;
     }
 
+    #endregion
+
+    #region Map Rendering
+
     private async Task ShowEmptyMapAsync() => await RenderMapAsync(Array.Empty<(double, double)>());
 
     private async Task DrawRouteAsync(RoadGraph graph, List<long> nodePath)
@@ -146,16 +322,21 @@ public partial class MainPage : ContentPage
         var template = Encoding.UTF8.GetString(templateBytes);
 
         var routeJson = JsonSerializer.Serialize(routeCoords.Select(c => new[] { c.Lat, c.Lon }));
-        var startJson = JsonSerializer.Serialize(new[] { StartCoord.Lat, StartCoord.Lon });
-        var endJson = JsonSerializer.Serialize(new[] { EndCoord.Lat, EndCoord.Lon });
+        var startJson = JsonSerializer.Serialize(new[] { _startCoord.Lat, _startCoord.Lon });
+        var endJson = JsonSerializer.Serialize(new[] { _endCoord.Lat, _endCoord.Lon });
 
         var html = template
             .Replace("__ROUTE_COORDS__", routeJson)
             .Replace("__START_COORD__", startJson)
-            .Replace("__END_COORD__", endJson);
+            .Replace("__END_COORD__", endJson)
+            .Replace("__START_TITLE__", EscapeForJs(_startTitle))
+            .Replace("__END_TITLE__", EscapeForJs(_endTitle));
 
         MapView.Source = new HtmlWebViewSource { Html = html };
     }
+
+    private static string EscapeForJs(string text) =>
+        text.Replace("'", "\\'").Replace("\"", "\\\"");
 
     private static async Task<string> EnsureLocalCopyAsync(string logicalName)
     {
@@ -176,4 +357,6 @@ public partial class MainPage : ContentPage
         await stream.CopyToAsync(ms);
         return ms.ToArray();
     }
+
+    #endregion
 }

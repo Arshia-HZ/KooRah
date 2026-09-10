@@ -131,8 +131,8 @@
             iconAnchor: [14, 14]
         });
 
-        L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup('Start');
-        L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('Destination');
+        L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup('__START_TITLE__');
+        L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('__END_TITLE__');
 
         if (routeCoords && routeCoords.length > 0) {
             // Soft turquoise glow underneath
@@ -153,10 +153,19 @@
                 lineCap: 'round'
             }).addTo(map);
 
-            // Fit bounds with comfortable padding for the top pill and bottom card
+            // Fit bounds with comfortable padding for top search card and bottom sheet
             map.fitBounds(corePolyline.getBounds(), {
-                paddingTopLeft: [60, 40],
-                paddingBottomRight: [40, 200]
+                paddingTopLeft: [130, 40],
+                paddingBottomRight: [40, 220]
+            });
+        } else {
+            var group = L.featureGroup([
+                L.marker(startCoord),
+                L.marker(endCoord)
+            ]);
+            map.fitBounds(group.getBounds().pad(0.4), {
+                paddingTopLeft: [130, 40],
+                paddingBottomRight: [40, 220]
             });
         }
     </script>

@@ -1,48 +1,168 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:services="clr-namespace:KooRah.App.Services"
              x:Class="KooRah.App.MainPage"
              BackgroundColor="#10151B"
              Title="KooRah">
 
-    <!-- Grid overlay: Map fills entire screen, Status Pill and Bottom Sheet float over it -->
+    <!-- Hero Map full-screen with floating interactive cards -->
     <Grid BackgroundColor="#10151B">
 
-        <!-- Full-bleed Hero Map (edge-to-edge) -->
+        <!-- Full-Bleed Map Hero Layer -->
         <WebView x:Name="MapView"
                  HorizontalOptions="Fill"
                  VerticalOptions="Fill" />
 
-        <!-- Top Floating Status Pill -->
-        <Border HorizontalOptions="Center"
-                VerticalOptions="Start"
-                Margin="0, 48, 0, 0"
-                Padding="14, 6"
-                StrokeShape="RoundRectangle 16"
-                StrokeThickness="0"
-                BackgroundColor="#1B232C">
-            <Border.Shadow>
-                <Shadow Brush="#05080C"
-                        Offset="0, 4"
-                        Radius="12"
-                        Opacity="0.5" />
-            </Border.Shadow>
-            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                <Ellipse x:Name="StatusDot"
-                         WidthRequest="8"
-                         HeightRequest="8"
-                         Fill="#8B96A3"
-                         VerticalOptions="Center" />
-                <Label x:Name="StatusLabel"
-                       Text="Loading road network..."
-                       FontFamily="Manrope"
-                       FontSize="13"
-                       TextColor="#8B96A3"
-                       VerticalOptions="Center" />
-            </HorizontalStackLayout>
-        </Border>
+        <!-- TOP: Floating Search & Status Card -->
+        <VerticalStackLayout VerticalOptions="Start"
+                             Margin="16, 20, 16, 0"
+                             Spacing="6">
 
-        <!-- Floating Bottom Sheet Card -->
+            <!-- Search Panel Border -->
+            <Border StrokeShape="RoundRectangle 18"
+                    StrokeThickness="1"
+                    Stroke="#222C38"
+                    BackgroundColor="#1B232C"
+                    Padding="14, 12">
+                <Border.Shadow>
+                    <Shadow Brush="#080C10"
+                            Offset="0, 6"
+                            Radius="18"
+                            Opacity="0.6" />
+                </Border.Shadow>
+
+                <VerticalStackLayout Spacing="8">
+                    <!-- Status Header Indicator -->
+                    <Grid ColumnDefinitions="Auto, *">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                            <Ellipse x:Name="StatusDot"
+                                     WidthRequest="8"
+                                     HeightRequest="8"
+                                     Fill="#8B96A3"
+                                     VerticalOptions="Center" />
+                            <Label x:Name="StatusLabel"
+                                   Text="Loading road network..."
+                                   FontFamily="Manrope"
+                                   FontSize="12"
+                                   TextColor="#8B96A3"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <!-- Origin Search Row with GPS Locate button -->
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                        <Border Grid.Column="0"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="1"
+                                Stroke="#26313E"
+                                BackgroundColor="#10151B"
+                                Padding="10, 2">
+                            <Entry x:Name="OriginEntry"
+                                   Placeholder="Origin (e.g. My Location, Azadi)"
+                                   PlaceholderColor="#5F6D7E"
+                                   TextColor="#EDEFF2"
+                                   FontFamily="Manrope"
+                                   FontSize="13"
+                                   HeightRequest="38"
+                                   TextChanged="OnOriginTextChanged"
+                                   Focused="OnOriginFocused" />
+                        </Border>
+
+                        <Button x:Name="LocateMeButton"
+                                Grid.Column="1"
+                                Text="⌖"
+                                ToolTipProperties.Text="Use My GPS Location"
+                                FontFamily="Manrope"
+                                FontSize="20"
+                                FontAttributes="Bold"
+                                TextColor="#23A6A0"
+                                BackgroundColor="#10151B"
+                                BorderColor="#26313E"
+                                BorderWidth="1"
+                                CornerRadius="12"
+                                WidthRequest="42"
+                                HeightRequest="42"
+                                Padding="0"
+                                Clicked="OnLocateMeClicked" />
+                    </Grid>
+
+                    <!-- Destination Search Row -->
+                    <Border StrokeShape="RoundRectangle 12"
+                            StrokeThickness="1"
+                            Stroke="#26313E"
+                            BackgroundColor="#10151B"
+                            Padding="10, 2">
+                        <Entry x:Name="DestinationEntry"
+                               Placeholder="Destination (e.g. Tajrish, Milad Tower)"
+                               PlaceholderColor="#5F6D7E"
+                               TextColor="#EDEFF2"
+                               FontFamily="Manrope"
+                               FontSize="13"
+                               HeightRequest="38"
+                               TextChanged="OnDestinationTextChanged"
+                               Focused="OnDestinationFocused" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Floating Suggestions Dropdown List -->
+            <Border x:Name="SuggestionsBorder"
+                    IsVisible="False"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="#222C38"
+                    BackgroundColor="#1B232C"
+                    Padding="6, 6"
+                    MaximumHeightRequest="220">
+                <Border.Shadow>
+                    <Shadow Brush="#05080C"
+                            Offset="0, 8"
+                            Radius="20"
+                            Opacity="0.75" />
+                </Border.Shadow>
+
+                <CollectionView x:Name="SuggestionsCollection"
+                                SelectionMode="Single"
+                                SelectionChanged="OnSuggestionSelected">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="services:PlaceSearchResult">
+                            <Border StrokeShape="RoundRectangle 10"
+                                    StrokeThickness="0"
+                                    BackgroundColor="Transparent"
+                                    Padding="10, 8"
+                                    Margin="0, 2">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup Name="CommonStates">
+                                        <VisualState Name="Normal" />
+                                        <VisualState Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Property="BackgroundColor" Value="#242F3B" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Name}"
+                                           FontFamily="Manrope"
+                                           FontSize="13"
+                                           FontAttributes="Bold"
+                                           TextColor="#EDEFF2" />
+                                    <Label Text="{Binding DisplayAddress}"
+                                           FontFamily="Manrope"
+                                           FontSize="11"
+                                           TextColor="#8B96A3"
+                                           LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- BOTTOM: Floating Route & ETA Sheet Card -->
         <Border HorizontalOptions="Fill"
                 VerticalOptions="End"
                 Margin="16, 0, 16, 28"
@@ -69,7 +189,7 @@
                                FontAttributes="Bold"
                                TextColor="#EDEFF2" />
                         <Label x:Name="AlgorithmDetailsLabel"
-                               Text="Tap Find Route to calculate"
+                               Text="Set origin &amp; destination"
                                FontFamily="Manrope"
                                FontSize="13"
                                TextColor="#8B96A3" />
@@ -86,7 +206,7 @@
                            Margin="0, 8, 0, 0" />
                 </Grid>
 
-                <!-- Amber delay/warning label (only visible when there are alerts) -->
+                <!-- Amber delay/warning label -->
                 <Label x:Name="WarningLabel"
                        Text=""
                        FontFamily="Manrope"
