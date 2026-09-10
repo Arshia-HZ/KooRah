@@ -10,12 +10,14 @@ namespace KooRah.App;
 
 public partial class MainPage : ContentPage
 {
-    // TODO: move to a config/secrets file instead of a literal - see chat note.
     private const string TomTomApiKey = "YOUR_API_KEY";
 
-    // Hardcoded for the first pass - swap for map-tap or an address search later.
     private static readonly (double Lat, double Lon) StartCoord = (35.7219, 51.3347); // Azadi
     private static readonly (double Lat, double Lon) EndCoord = (35.6997, 51.3380);
+
+    private static readonly Color ColorTurquoise = Color.FromArgb("#23A6A0");
+    private static readonly Color ColorAmber = Color.FromArgb("#E0A458");
+    private static readonly Color ColorMuted = Color.FromArgb("#8B96A3");
 
     private RoadGraph? _graph;
     private readonly HttpClient _http = new();
@@ -26,23 +28,33 @@ public partial class MainPage : ContentPage
         _ = LoadGraphAsync();
     }
 
+    private void SetStatus(string text, Color dotColor)
+    {
+        StatusLabel.Text = text;
+        StatusDot.Fill = new SolidColorBrush(dotColor);
+    }
+
     private async Task LoadGraphAsync()
     {
         try
         {
+            SetStatus("Loading road network...", ColorMuted);
             var localPbfPath = await EnsureLocalCopyAsync("tehran.osm.pbf");
 
-            StatusLabel.Text = "Building road graph (first run only takes longer)...";
+            SetStatus("Building road graph...", ColorMuted);
             _graph = await Task.Run(() => OsmGraphBuilder.BuildFromPbf(localPbfPath));
 
-            StatusLabel.Text = $"Ready — {_graph.Nodes.Count:N0} nodes, {_graph.Edges.Count:N0} edges.";
+            SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
+            AlgorithmDetailsLabel.Text = "Tap Find Route to calculate";
             FindRouteButton.IsEnabled = true;
 
             await ShowEmptyMapAsync();
         }
         catch (Exception ex)
         {
-            StatusLabel.Text = $"Failed to load graph: {ex.Message}";
+            SetStatus("Failed to load graph", ColorAmber);
+            WarningLabel.Text = ex.Message;
+            WarningLabel.IsVisible = true;
         }
     }
 
@@ -51,7 +63,8 @@ public partial class MainPage : ContentPage
         if (_graph is null) return;
 
         FindRouteButton.IsEnabled = false;
-        StatusLabel.Text = "Finding candidate route...";
+        WarningLabel.IsVisible = false;
+        SetStatus("Finding candidate route...", ColorMuted);
 
         var graph = _graph;
         var start = graph.FindNearestNode(StartCoord.Lat, StartCoord.Lon);
@@ -63,12 +76,14 @@ public partial class MainPage : ContentPage
         var (initial, _) = await Task.Run(() => comparer.FindBestRoute(graph, start.Id, end.Id));
         if (initial is null)
         {
-            StatusLabel.Text = "No route found between those points.";
+            SetStatus("No route found", ColorAmber);
+            WarningLabel.Text = "No navigable path found between coordinates.";
+            WarningLabel.IsVisible = true;
             FindRouteButton.IsEnabled = true;
             return;
         }
 
-        StatusLabel.Text = "Updating live traffic for candidate route...";
+        SetStatus("Updating live traffic...", ColorAmber);
         var traffic = new TomTomTrafficProvider(TomTomApiKey);
         var candidateEdges = ResolveEdges(graph, initial.NodePath);
 
@@ -78,20 +93,25 @@ public partial class MainPage : ContentPage
             catch { /* keep free-flow speed for this edge if the call fails */ }
         }
 
-        StatusLabel.Text = "Racing algorithms with live traffic...";
+        SetStatus("Racing algorithms...", ColorMuted);
         var (best, all) = await Task.Run(() => comparer.FindBestRoute(graph, start.Id, end.Id));
 
         if (best is null)
         {
-            StatusLabel.Text = "No route found after traffic update.";
+            SetStatus("Routing failed", ColorAmber);
+            WarningLabel.Text = "Could not compute route with current traffic conditions.";
+            WarningLabel.IsVisible = true;
             FindRouteButton.IsEnabled = true;
             return;
         }
 
-        var timings = string.Join(", ", all.Select(r => $"{r.AlgorithmName} {r.ComputeTime.TotalMilliseconds:F1}ms"));
-        StatusLabel.Text =
-            $"{best.AlgorithmName} won — {best.TotalTravelTimeSeconds / 60:F0} min, " +
-            $"{best.TotalDistanceMeters / 1000:F1} km ({timings})";
+        // Display results according to night-driving design specs:
+        var etaMinutes = Math.Max(1, (int)Math.Round(best.TotalTravelTimeSeconds / 60.0));
+        EtaLabel.Text = $"{etaMinutes} min";
+        DistanceLabel.Text = $"{best.TotalDistanceMeters / 1000.0:F1} km";
+
+        AlgorithmDetailsLabel.Text = $"{best.AlgorithmName} · {best.ComputeTime.TotalMilliseconds:F1}ms";
+        SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
 
         await DrawRouteAsync(graph, best.NodePath);
         FindRouteButton.IsEnabled = true;
@@ -137,7 +157,6 @@ public partial class MainPage : ContentPage
         MapView.Source = new HtmlWebViewSource { Html = html };
     }
 
-    /// <summary>Copies a bundled MauiAsset out to app-writable storage, once, and returns the real path.</summary>
     private static async Task<string> EnsureLocalCopyAsync(string logicalName)
     {
         var localPath = Path.Combine(FileSystem.CacheDirectory, logicalName);

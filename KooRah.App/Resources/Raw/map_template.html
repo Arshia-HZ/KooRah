@@ -2,10 +2,98 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        html, body, #map { height: 100%; margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #10151B;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #10151B;
+        }
+
+        /* Dark mode overrides for Leaflet UI controls */
+        .leaflet-control-zoom {
+            border: 1px solid #222C38 !important;
+            border-radius: 12px !important;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+            margin-right: 16px !important;
+            margin-top: 60px !important;
+        }
+        .leaflet-control-zoom a {
+            background-color: #1B232C !important;
+            color: #EDEFF2 !important;
+            border-bottom: 1px solid #222C38 !important;
+            width: 36px !important;
+            height: 36px !important;
+            line-height: 36px !important;
+            font-size: 16px !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background-color: #242F3B !important;
+            color: #23A6A0 !important;
+        }
+        .leaflet-control-attribution {
+            background-color: rgba(16, 21, 27, 0.75) !important;
+            color: #8B96A3 !important;
+            font-size: 10px !important;
+            backdrop-filter: blur(4px);
+        }
+        .leaflet-control-attribution a {
+            color: #8B96A3 !important;
+            text-decoration: none;
+        }
+
+        /* Custom Modern Pin Marker Icons */
+        .map-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #10151B;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+        }
+        .pin-start {
+            border: 3px solid #23A6A0;
+        }
+        .pin-start-inner {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #23A6A0;
+        }
+        .pin-dest {
+            border: 3px solid #EDEFF2;
+        }
+        .pin-dest-inner {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #EDEFF2;
+        }
+
+        /* Dark popup */
+        .leaflet-popup-content-wrapper {
+            background-color: #1B232C !important;
+            color: #EDEFF2 !important;
+            border: 1px solid #222C38 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+        }
+        .leaflet-popup-tip {
+            background-color: #1B232C !important;
+        }
     </style>
 </head>
 <body>
@@ -16,20 +104,61 @@
         var startCoord = __START_COORD__;     // [lat, lon]
         var endCoord = __END_COORD__;         // [lat, lon]
 
-        var map = L.map('map').setView(startCoord, 14);
+        var map = L.map('map', {
+            zoomControl: true,
+            attributionControl: true
+        }).setView(startCoord, 14);
 
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // CartoDB Dark Matter tiles (night-driving-first OSM tiles)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }).addTo(map);
 
-        if (routeCoords.length > 0) {
-            var polyline = L.polyline(routeCoords, { color: '#2b6cb0', weight: 5 }).addTo(map);
-            map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
-        }
+        // Custom minimalist night markers
+        var startIcon = L.divIcon({
+            className: 'custom-pin-start',
+            html: '<div class="map-pin pin-start"><div class="pin-start-inner"></div></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
 
-        L.marker(startCoord).addTo(map).bindPopup('Start');
-        L.marker(endCoord).addTo(map).bindPopup('Destination');
+        var destIcon = L.divIcon({
+            className: 'custom-pin-dest',
+            html: '<div class="map-pin pin-dest"><div class="pin-dest-inner"></div></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+
+        L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup('Start');
+        L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('Destination');
+
+        if (routeCoords && routeCoords.length > 0) {
+            // Soft turquoise glow underneath
+            L.polyline(routeCoords, {
+                color: '#23A6A0',
+                weight: 12,
+                opacity: 0.25,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            // Core Persian turquoise polyline
+            var corePolyline = L.polyline(routeCoords, {
+                color: '#23A6A0',
+                weight: 6,
+                opacity: 0.95,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            // Fit bounds with comfortable padding for the top pill and bottom card
+            map.fitBounds(corePolyline.getBounds(), {
+                paddingTopLeft: [60, 40],
+                paddingBottomRight: [40, 200]
+            });
+        }
     </script>
 </body>
 </html>

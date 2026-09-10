@@ -11,6 +11,8 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
+                fonts.AddFont("SpaceGrotesk.ttf", "SpaceGrotesk");
+                fonts.AddFont("Manrope.ttf", "Manrope");
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
             });
 

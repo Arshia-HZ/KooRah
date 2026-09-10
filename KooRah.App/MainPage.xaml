@@ -2,25 +2,112 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="KooRah.App.MainPage"
+             BackgroundColor="#10151B"
              Title="KooRah">
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <!-- Grid overlay: Map fills entire screen, Status Pill and Bottom Sheet float over it -->
+    <Grid BackgroundColor="#10151B">
 
-        <Label x:Name="StatusLabel"
-               Grid.Row="0"
-               Text="Loading graph..."
-               Padding="12,8"
-               FontSize="14" />
-
-        <Button x:Name="FindRouteButton"
-                Grid.Row="1"
-                Text="Find Route"
-                Margin="12,0,12,8"
-                Clicked="OnFindRouteClicked"
-                IsEnabled="False" />
-
+        <!-- Full-bleed Hero Map (edge-to-edge) -->
         <WebView x:Name="MapView"
-                 Grid.Row="2" />
+                 HorizontalOptions="Fill"
+                 VerticalOptions="Fill" />
+
+        <!-- Top Floating Status Pill -->
+        <Border HorizontalOptions="Center"
+                VerticalOptions="Start"
+                Margin="0, 48, 0, 0"
+                Padding="14, 6"
+                StrokeShape="RoundRectangle 16"
+                StrokeThickness="0"
+                BackgroundColor="#1B232C">
+            <Border.Shadow>
+                <Shadow Brush="#05080C"
+                        Offset="0, 4"
+                        Radius="12"
+                        Opacity="0.5" />
+            </Border.Shadow>
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                <Ellipse x:Name="StatusDot"
+                         WidthRequest="8"
+                         HeightRequest="8"
+                         Fill="#8B96A3"
+                         VerticalOptions="Center" />
+                <Label x:Name="StatusLabel"
+                       Text="Loading road network..."
+                       FontFamily="Manrope"
+                       FontSize="13"
+                       TextColor="#8B96A3"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </Border>
+
+        <!-- Floating Bottom Sheet Card -->
+        <Border HorizontalOptions="Fill"
+                VerticalOptions="End"
+                Margin="16, 0, 16, 28"
+                Padding="24, 20"
+                StrokeShape="RoundRectangle 24"
+                StrokeThickness="1"
+                Stroke="#222C38"
+                BackgroundColor="#1B232C">
+            <Border.Shadow>
+                <Shadow Brush="#080C10"
+                        Offset="0, 8"
+                        Radius="24"
+                        Opacity="0.65" />
+            </Border.Shadow>
+
+            <VerticalStackLayout Spacing="16">
+                <!-- Metrics Row: Big ETA on left, Distance on right -->
+                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                        <Label x:Name="EtaLabel"
+                               Text="-- min"
+                               FontFamily="SpaceGrotesk"
+                               FontSize="38"
+                               FontAttributes="Bold"
+                               TextColor="#EDEFF2" />
+                        <Label x:Name="AlgorithmDetailsLabel"
+                               Text="Tap Find Route to calculate"
+                               FontFamily="Manrope"
+                               FontSize="13"
+                               TextColor="#8B96A3" />
+                    </VerticalStackLayout>
+
+                    <Label x:Name="DistanceLabel"
+                           Grid.Column="1"
+                           Text=""
+                           FontFamily="Manrope"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#EDEFF2"
+                           VerticalOptions="Start"
+                           Margin="0, 8, 0, 0" />
+                </Grid>
+
+                <!-- Amber delay/warning label (only visible when there are alerts) -->
+                <Label x:Name="WarningLabel"
+                       Text=""
+                       FontFamily="Manrope"
+                       FontSize="12"
+                       TextColor="#E0A458"
+                       IsVisible="False" />
+
+                <!-- Single Accent Action Button -->
+                <Button x:Name="FindRouteButton"
+                        Text="Find Route"
+                        FontFamily="Manrope"
+                        FontSize="16"
+                        FontAttributes="Bold"
+                        TextColor="#10151B"
+                        BackgroundColor="#23A6A0"
+                        CornerRadius="16"
+                        HeightRequest="52"
+                        Clicked="OnFindRouteClicked"
+                        IsEnabled="False" />
+            </VerticalStackLayout>
+        </Border>
 
     </Grid>
 
