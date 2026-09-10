@@ -1,0 +1,17 @@
+## Build & Compilation
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Visual Studio & IDE
+.vs/
+.idea/
+*.suo
+*.userprefs
+*.launchSettings.json
+
+## Large Data & Archives
+koorah.zip
+*.pbf

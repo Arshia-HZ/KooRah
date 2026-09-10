@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="KooRah.ConsoleTest/KooRah.ConsoleTest.csproj" />
+  <Project Path="KooRah.Core.csproj" />
+</Solution>

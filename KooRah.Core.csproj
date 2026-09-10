@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefaultItemExcludes>$(DefaultItemExcludes);KooRah.ConsoleTest\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Parses .osm.pbf / .osm.xml extracts into usable data -->
+    <!-- OsmSharp will be added/updated via dotnet CLI to the latest compatible version -->
+    <!-- Removed explicit System.Text.Json reference: it's part of the base framework for net10.0 -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OsmSharp" Version="6.2.0" />
+  </ItemGroup>
+
+</Project>
