@@ -11,22 +11,35 @@ namespace KooRah.App;
 
 public partial class MainPage : ContentPage
 {
+    private enum NavState
+    {
+        Idle,           // Waiting for inputs / route calculation
+        RouteCalculated,// 2D route overview displayed, ready to start
+        Navigating      // 3D driver follow navigation active
+    }
+
     private static readonly Color ColorTurquoise = Color.FromArgb("#23A6A0");
     private static readonly Color ColorAmber = Color.FromArgb("#E0A458");
     private static readonly Color ColorMuted = Color.FromArgb("#8B96A3");
+    private static readonly Color ColorActiveNavBtn = Color.FromArgb("#364453");
+
+    private static readonly (double Lat, double Lon) FallbackAzadi = (35.6997, 51.3375);
+    private const string FallbackOriginTitle = "Azadi Square";
 
     private readonly GeocodingService _geocoding = new();
     private readonly HttpClient _http = new();
 
     private RoadGraph? _graph;
 
-    // Current routing endpoints (defaults: Azadi to Tajrish)
-    private (double Lat, double Lon) _startCoord = (35.6997, 51.3375); // Azadi
-    private string _startTitle = "Azadi Square";
+    // Origin defaults to Azadi if location access is not granted
+    private (double Lat, double Lon) _startCoord = FallbackAzadi;
+    private string _startTitle = FallbackOriginTitle;
 
-    private (double Lat, double Lon) _endCoord = (35.8049, 51.4410); // Tajrish
-    private string _endTitle = "Tajrish";
+    // Destination is empty by default until user selects one
+    private (double Lat, double Lon)? _endCoord = null;
+    private string _endTitle = string.Empty;
 
+    private NavState _navState = NavState.Idle;
     private bool _isSearchingOrigin = false;
     private CancellationTokenSource? _searchCts;
     private bool _isProgrammaticTextChange = false;
@@ -36,7 +49,10 @@ public partial class MainPage : ContentPage
         InitializeComponent();
 
         OriginEntry.Text = _startTitle;
-        DestinationEntry.Text = _endTitle;
+        DestinationEntry.Text = string.Empty;
+        FindRouteButton.IsEnabled = false;
+        FindRouteButton.Text = "Find Route";
+        AlgorithmDetailsLabel.Text = "Choose a destination to route";
 
         _ = LoadGraphAndLocationAsync();
     }
@@ -49,10 +65,10 @@ public partial class MainPage : ContentPage
 
     private async Task LoadGraphAndLocationAsync()
     {
-        // 1. Start loading road network in background
+        // 1. Concurrently start building road network
         _ = LoadGraphAsync();
 
-        // 2. Concurrently detect user's current GPS location as default origin
+        // 2. Query user GPS location as default origin (loads single local tile at zoom 15)
         await DetectUserLocationAsync();
     }
 
@@ -67,10 +83,17 @@ public partial class MainPage : ContentPage
             _graph = await Task.Run(() => OsmGraphBuilder.BuildFromPbf(localPbfPath));
 
             SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
-            AlgorithmDetailsLabel.Text = "Tap Find Route to calculate";
-            FindRouteButton.IsEnabled = true;
 
-            await ShowEmptyMapAsync();
+            if (_endCoord.HasValue)
+            {
+                AlgorithmDetailsLabel.Text = "Tap Find Route to calculate";
+                FindRouteButton.IsEnabled = true;
+            }
+            else
+            {
+                AlgorithmDetailsLabel.Text = "Choose a destination to route";
+                FindRouteButton.IsEnabled = false;
+            }
         }
         catch (Exception ex)
         {
@@ -82,6 +105,7 @@ public partial class MainPage : ContentPage
 
     private async Task DetectUserLocationAsync()
     {
+        bool detected = false;
         try
         {
             var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
@@ -101,13 +125,7 @@ public partial class MainPage : ContentPage
 
                     var placeName = await _geocoding.ReverseGeocodeAsync(location.Latitude, location.Longitude);
                     _startTitle = !string.IsNullOrWhiteSpace(placeName) ? placeName : "My Current Location";
-
-                    _isProgrammaticTextChange = true;
-                    OriginEntry.Text = _startTitle;
-                    _isProgrammaticTextChange = false;
-
-                    await ShowEmptyMapAsync();
-                    return;
+                    detected = true;
                 }
             }
         }
@@ -116,14 +134,27 @@ public partial class MainPage : ContentPage
             // Geolocation unavailable or unsupported on desktop platform; keep fallback
         }
 
-        // Fallback default origin
+        if (!detected)
+        {
+            _startCoord = FallbackAzadi;
+            _startTitle = FallbackOriginTitle;
+        }
+
         _isProgrammaticTextChange = true;
         OriginEntry.Text = _startTitle;
         _isProgrammaticTextChange = false;
+
+        // Render the single local tile around the detected origin
+        await ShowEmptyMapAsync();
     }
 
     private async void OnLocateMeClicked(object? sender, EventArgs e)
     {
+        if (_navState == NavState.Navigating)
+        {
+            await StopNavigationAsync();
+        }
+
         SetStatus("Locating via GPS...", ColorAmber);
         LocateMeButton.IsEnabled = false;
 
@@ -152,6 +183,18 @@ public partial class MainPage : ContentPage
     {
         if (_isProgrammaticTextChange) return;
         _isSearchingOrigin = true;
+
+        if (string.IsNullOrWhiteSpace(e.NewTextValue))
+        {
+            if (_navState == NavState.Navigating)
+            {
+                _ = StopNavigationAsync();
+            }
+            _startCoord = FallbackAzadi;
+            _startTitle = FallbackOriginTitle;
+            ResetToIdleState();
+        }
+
         TriggerSearchDebounced(e.NewTextValue);
     }
 
@@ -159,7 +202,34 @@ public partial class MainPage : ContentPage
     {
         if (_isProgrammaticTextChange) return;
         _isSearchingOrigin = false;
+
+        if (string.IsNullOrWhiteSpace(e.NewTextValue))
+        {
+            if (_navState == NavState.Navigating)
+            {
+                _ = StopNavigationAsync();
+            }
+            _endCoord = null;
+            _endTitle = string.Empty;
+            ResetToIdleState();
+            _ = ShowEmptyMapAsync();
+        }
+
         TriggerSearchDebounced(e.NewTextValue);
+    }
+
+    private void ResetToIdleState()
+    {
+        _navState = NavState.Idle;
+        FindRouteButton.Text = "Find Route";
+        FindRouteButton.BackgroundColor = ColorTurquoise;
+        FindRouteButton.TextColor = Color.FromArgb("#10151B");
+        FindRouteButton.IsEnabled = _endCoord.HasValue && _graph != null;
+        EtaLabel.Text = "-- min";
+        DistanceLabel.Text = string.Empty;
+        AlgorithmDetailsLabel.Text = _endCoord.HasValue
+            ? "Tap Find Route to calculate"
+            : "Choose a destination to route";
     }
 
     private void TriggerSearchDebounced(string query)
@@ -219,17 +289,35 @@ public partial class MainPage : ContentPage
         SuggestionsBorder.IsVisible = false;
         SuggestionsCollection.SelectedItem = null;
 
-        // Re-center map to the new endpoints
+        // Reset to idle routing state
+        ResetToIdleState();
+
+        // Re-center map with updated endpoints
         _ = ShowEmptyMapAsync();
     }
 
     #endregion
 
-    #region Route Calculation
+    #region Route Calculation & Navigation State Machine
 
     private async void OnFindRouteClicked(object? sender, EventArgs e)
     {
-        if (_graph is null) return;
+        if (_navState == NavState.Navigating)
+        {
+            // Stop 3D driver follow navigation and return to 2D route overview
+            await StopNavigationAsync();
+            return;
+        }
+
+        if (_navState == NavState.RouteCalculated)
+        {
+            // Transition into 3D driver follow mode
+            await StartNavigationAsync();
+            return;
+        }
+
+        // Idle state: compute optimal route
+        if (_graph is null || !_endCoord.HasValue) return;
 
         SuggestionsBorder.IsVisible = false;
         FindRouteButton.IsEnabled = false;
@@ -238,7 +326,7 @@ public partial class MainPage : ContentPage
 
         var graph = _graph;
         var start = graph.FindNearestNode(_startCoord.Lat, _startCoord.Lon);
-        var end = graph.FindNearestNode(_endCoord.Lat, _endCoord.Lon);
+        var end = graph.FindNearestNode(_endCoord.Value.Lat, _endCoord.Value.Lon);
 
         var comparer = new RouteComparer();
 
@@ -285,7 +373,43 @@ public partial class MainPage : ContentPage
         SetStatus($"Ready — {_graph.Nodes.Count:N0} nodes", ColorTurquoise);
 
         await DrawRouteAsync(graph, best.NodePath);
+
+        // Transition to RouteCalculated state
+        _navState = NavState.RouteCalculated;
+        FindRouteButton.Text = "▶ Start Navigation";
+        FindRouteButton.BackgroundColor = ColorTurquoise;
+        FindRouteButton.TextColor = Color.FromArgb("#10151B");
         FindRouteButton.IsEnabled = true;
+    }
+
+    private async Task StartNavigationAsync()
+    {
+        _navState = NavState.Navigating;
+        FindRouteButton.Text = "✕ Exit Navigation";
+        FindRouteButton.BackgroundColor = ColorActiveNavBtn;
+        FindRouteButton.TextColor = Color.FromArgb("#EDEFF2");
+
+        SetStatus("3D Follow Navigation Active", ColorTurquoise);
+        try
+        {
+            await MapView.EvaluateJavaScriptAsync("startDriving();");
+        }
+        catch { /* WebView guard */ }
+    }
+
+    private async Task StopNavigationAsync()
+    {
+        _navState = NavState.RouteCalculated;
+        FindRouteButton.Text = "▶ Start Navigation";
+        FindRouteButton.BackgroundColor = ColorTurquoise;
+        FindRouteButton.TextColor = Color.FromArgb("#10151B");
+
+        SetStatus($"Ready — {_graph?.Nodes.Count:N0} nodes", ColorTurquoise);
+        try
+        {
+            await MapView.EvaluateJavaScriptAsync("stopDriving();");
+        }
+        catch { /* WebView guard */ }
     }
 
     private static List<GraphEdge> ResolveEdges(RoadGraph graph, List<long> nodePath)
@@ -322,7 +446,9 @@ public partial class MainPage : ContentPage
 
         var routeJson = JsonSerializer.Serialize(routeCoords.Select(c => new[] { c.Lat, c.Lon }));
         var startJson = JsonSerializer.Serialize(new[] { _startCoord.Lat, _startCoord.Lon });
-        var endJson = JsonSerializer.Serialize(new[] { _endCoord.Lat, _endCoord.Lon });
+        var endJson = _endCoord.HasValue
+            ? JsonSerializer.Serialize(new[] { _endCoord.Value.Lat, _endCoord.Value.Lon })
+            : "null";
 
         var html = template
             .Replace("__ROUTE_COORDS__", routeJson)

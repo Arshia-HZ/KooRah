@@ -18,29 +18,47 @@
             width: 100%;
             height: 100%;
             background-color: #10151B;
-            perspective: 800px;
+            overflow: hidden;
+            perspective: 750px;
         }
 
-        /* 3D Driver's Perspective Mode */
-        #map.mode-3d .leaflet-map-pane {
+        /* 3D Driver Follow Navigation Mode (Dynamic Bearing Rotation) */
+        #map.nav-mode .leaflet-map-pane {
+            transform: rotateZ(var(--map-bearing, 0deg)) rotateX(55deg) translateY(20%);
+            transform-origin: 50% 50%;
+            transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.25, 1);
+        }
+        #map:not(.nav-mode):not(.mode-3d) .leaflet-map-pane {
+            transform: rotateX(0deg) rotateZ(0deg) translateY(0);
+            transform-origin: 50% 50%;
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.25, 1);
+        }
+        #map.mode-3d:not(.nav-mode) .leaflet-map-pane {
             transform: rotateX(48deg) translateY(-8%) scale(1.08);
             transform-origin: 50% 82%;
             transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
         }
-        #map:not(.mode-3d) .leaflet-map-pane {
-            transform: rotateX(0deg) translateY(0) scale(1);
-            transform-origin: 50% 82%;
-            transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
+
+        /* Map Controls Container in Bottom-Right (Clear of Top Search & Above Bottom Sheet) */
+        .leaflet-bottom.leaflet-right {
+            bottom: 240px !important;
+            right: 16px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+            gap: 10px !important;
+            z-index: 800 !important;
+        }
+        .leaflet-bottom.leaflet-right .leaflet-control {
+            margin: 0 !important;
+            float: none !important;
+            clear: both !important;
         }
 
-        /* 3D / 2D Floating Toggle Button */
+        /* 3D / 2D Perspective Toggle Button */
         .btn-3d-toggle {
-            position: absolute;
-            right: 16px;
-            top: 240px;
-            z-index: 800;
-            width: 44px;
-            height: 44px;
+            width: 38px;
+            height: 38px;
             border-radius: 12px;
             background-color: #1B232C;
             color: #EDEFF2;
@@ -67,49 +85,49 @@
             box-shadow: 0 4px 16px rgba(35, 166, 160, 0.35);
         }
 
-        /* Dark mode overrides for Leaflet UI controls */
+        /* Dark Mode overrides for Leaflet UI controls */
         .leaflet-control-zoom {
             border: 1px solid #222C38 !important;
             border-radius: 12px !important;
             overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
-            margin-right: 16px !important;
-            margin-top: 140px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
         }
         .leaflet-control-zoom a {
             background-color: #1B232C !important;
             color: #EDEFF2 !important;
             border-bottom: 1px solid #222C38 !important;
-            width: 36px !important;
-            height: 36px !important;
-            line-height: 36px !important;
+            width: 38px !important;
+            height: 38px !important;
+            line-height: 38px !important;
             font-size: 16px !important;
         }
         .leaflet-control-zoom a:hover {
             background-color: #242F3B !important;
             color: #23A6A0 !important;
         }
+
         .leaflet-control-layers {
             background-color: #1B232C !important;
             color: #EDEFF2 !important;
             border: 1px solid #222C38 !important;
             border-radius: 12px !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
-            margin-right: 16px !important;
-            margin-top: 140px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
             font-family: inherit !important;
             font-size: 12px !important;
             padding: 8px 12px !important;
         }
         .leaflet-control-layers-toggle {
             background-color: #1B232C !important;
-            border-radius: 8px !important;
+            border-radius: 10px !important;
+            width: 38px !important;
+            height: 38px !important;
         }
         .leaflet-control-layers label {
             color: #EDEFF2 !important;
             margin-bottom: 4px !important;
             cursor: pointer;
         }
+
         .leaflet-control-attribution {
             background-color: rgba(16, 21, 27, 0.75) !important;
             color: #8B96A3 !important;
@@ -151,6 +169,40 @@
             background-color: #EDEFF2;
         }
 
+        /* Driver Navigation Vehicle Puck */
+        .driver-puck {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .driver-pulse {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(35, 166, 160, 0.35);
+            animation: pulse-ring 1.8s infinite ease-out;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.6); opacity: 0.8; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+        .driver-arrow-container {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
+        }
+        .driver-arrow {
+            width: 28px;
+            height: 28px;
+        }
+
         /* Dark popup */
         .leaflet-popup-content-wrapper {
             background-color: #1B232C !important;
@@ -166,21 +218,21 @@
 </head>
 <body>
     <div id="map"></div>
-    <div id="btn3D" class="btn-3d-toggle" onclick="toggle3D()" title="Toggle 3D Driver Perspective">3D</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var routeCoords = __ROUTE_COORDS__;   // [[lat, lon], [lat, lon], ...]
+        var routeCoords = __ROUTE_COORDS__;   // [[lat, lon], ...] or []
         var startCoord = __START_COORD__;     // [lat, lon]
-        var endCoord = __END_COORD__;         // [lat, lon]
+        var endCoord = __END_COORD__;         // [lat, lon] or null
 
-        // Initialize at zoom 12 for fast initial startup (loads ~4 tiles instead of 25+)
+        // Zoom 15 for fast single-tile startup when no active route
+        var initialZoom = (routeCoords && routeCoords.length > 0) ? 12 : 15;
         var map = L.map('map', {
-            zoomControl: true,
-            attributionControl: true
-        }).setView(startCoord, 12);
+            zoomControl: false,
+            attributionControl: false
+        }).setView(startCoord, initialZoom);
 
-        // 1. Navigation Streets layer (Esri World Street Map - warm, balanced, high clarity, NO watermark/key)
+        // 1. Navigation Streets layer (Esri World Street Map - warm, high clarity, NO watermark/key)
         var streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             updateWhenIdle: true,
@@ -198,11 +250,32 @@
             attribution: '&copy; OpenStreetMap contributors'
         });
 
-        // Layer Switcher Control (allows one-click toggle between styles)
+        // 3D Perspective Toggle Custom Control
+        var Toggle3DControl = L.Control.extend({
+            options: { position: 'bottomright' },
+            onAdd: function(map) {
+                var btn = L.DomUtil.create('div', 'btn-3d-toggle');
+                btn.id = 'btn3D';
+                btn.innerHTML = '3D';
+                btn.title = 'Toggle 3D Perspective';
+                L.DomEvent.disableClickPropagation(btn);
+                btn.onclick = function() { toggle3D(); };
+                return btn;
+            }
+        });
+        map.addControl(new Toggle3DControl());
+
+        // Zoom Controls in Bottom Right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Layer Switcher Control in Bottom Right
         L.control.layers({
             "Navigation Streets": streetLayer,
             "OpenStreetMap": osmLayer
-        }, null, { position: 'topright' }).addTo(map);
+        }, null, { position: 'bottomright' }).addTo(map);
+
+        // Attribution in Bottom Left (Unobtrusive)
+        L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map);
 
         // Custom minimalist markers
         var startIcon = L.divIcon({
@@ -219,8 +292,11 @@
             iconAnchor: [14, 14]
         });
 
-        L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup('__START_TITLE__');
-        L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('__END_TITLE__');
+        var startMarker = L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup('__START_TITLE__');
+        var destMarker = null;
+        if (endCoord && endCoord.length === 2) {
+            destMarker = L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('__END_TITLE__');
+        }
 
         // 3D Perspective Toggle Engine
         var is3D = false;
@@ -234,15 +310,20 @@
             var btn = document.getElementById('btn3D');
             if (is3D) {
                 mapEl.classList.add('mode-3d');
-                btn.classList.add('active');
-                btn.innerText = '2D';
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.innerText = '2D';
+                }
             } else {
                 mapEl.classList.remove('mode-3d');
-                btn.classList.remove('active');
-                btn.innerText = '3D';
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.innerText = '3D';
+                }
             }
         }
 
+        var corePolyline = null;
         if (routeCoords && routeCoords.length > 0) {
             // Soft turquoise glow underneath
             L.polyline(routeCoords, {
@@ -254,7 +335,7 @@
             }).addTo(map);
 
             // Core Persian turquoise polyline
-            var corePolyline = L.polyline(routeCoords, {
+            corePolyline = L.polyline(routeCoords, {
                 color: '#23A6A0',
                 weight: 6,
                 opacity: 0.95,
@@ -265,22 +346,151 @@
             // Fit bounds with comfortable padding for top search card and bottom sheet
             map.fitBounds(corePolyline.getBounds(), {
                 paddingTopLeft: [140, 40],
-                paddingBottomRight: [40, 220]
+                paddingBottomRight: [40, 240]
             });
-
-            // Automatically transition to 3D angled driver perspective on active route
-            setTimeout(function() {
-                toggle3D(true);
-            }, 300);
-        } else {
-            var group = L.featureGroup([
-                L.marker(startCoord),
-                L.marker(endCoord)
-            ]);
+        } else if (destMarker) {
+            var group = L.featureGroup([startMarker, destMarker]);
             map.fitBounds(group.getBounds().pad(0.3), {
                 paddingTopLeft: [140, 40],
-                paddingBottomRight: [40, 220]
+                paddingBottomRight: [40, 240]
             });
+        } else {
+            // Single tile startup: local view centered on origin
+            map.setView(startCoord, 15);
+        }
+
+        // -------------------------------------------------------------
+        // Driver Follow 3D Navigation Engine
+        // -------------------------------------------------------------
+        var drivingInterval = null;
+        var driverMarker = null;
+
+        function startDriving() {
+            if (!routeCoords || routeCoords.length < 2) return;
+
+            stopDriving(); // clean up any previous session
+
+            var mapEl = document.getElementById('map');
+            mapEl.classList.add('nav-mode');
+            mapEl.classList.remove('mode-3d');
+
+            var btn = document.getElementById('btn3D');
+            if (btn) {
+                btn.classList.add('active');
+                btn.innerText = '2D';
+            }
+
+            // Create driver vehicle marker
+            var driverIcon = L.divIcon({
+                className: 'driver-vehicle-icon',
+                html: '<div class="driver-puck"><div class="driver-pulse"></div><div class="driver-arrow-container"><svg viewBox="0 0 32 32" class="driver-arrow"><path d="M16 2 L29 27 L16 20 L3 27 Z" fill="#23A6A0" stroke="#EDEFF2" stroke-width="2.5" stroke-linejoin="round"/></svg></div></div>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
+            var startPos = routeCoords[0];
+            driverMarker = L.marker(startPos, { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
+            map.setView(startPos, 17, { animate: false });
+
+            // Initial bearing
+            var initialBearing = getBearing(routeCoords[0], routeCoords[1]);
+            mapEl.style.setProperty('--map-bearing', (-initialBearing) + 'deg');
+
+            // Generate interpolated micro-waypoints between route nodes for silky smooth movement
+            var waypoints = generateSmoothPath(routeCoords);
+            var waypointIndex = 0;
+
+            drivingInterval = setInterval(function() {
+                if (waypointIndex >= waypoints.length - 1) {
+                    clearInterval(drivingInterval);
+                    return;
+                }
+
+                waypointIndex++;
+                var cur = waypoints[waypointIndex];
+                var lookAhead = waypoints[Math.min(waypointIndex + 4, waypoints.length - 1)];
+
+                var heading = getBearing(cur, lookAhead);
+
+                // Update vehicle position
+                driverMarker.setLatLng(cur);
+
+                // Center map exactly on driver position
+                map.panTo(cur, { animate: false });
+
+                // Rotate map so camera stays directly behind the vehicle pointing forward
+                mapEl.style.setProperty('--map-bearing', (-heading) + 'deg');
+            }, 80);
+        }
+
+        function stopDriving() {
+            if (drivingInterval) {
+                clearInterval(drivingInterval);
+                drivingInterval = null;
+            }
+
+            var mapEl = document.getElementById('map');
+            mapEl.classList.remove('nav-mode');
+            mapEl.style.setProperty('--map-bearing', '0deg');
+
+            var btn = document.getElementById('btn3D');
+            if (btn) {
+                btn.classList.remove('active');
+                btn.innerText = '3D';
+            }
+
+            if (driverMarker) {
+                map.removeLayer(driverMarker);
+                driverMarker = null;
+            }
+
+            if (routeCoords && routeCoords.length > 0 && corePolyline) {
+                map.fitBounds(corePolyline.getBounds(), {
+                    paddingTopLeft: [140, 40],
+                    paddingBottomRight: [40, 240]
+                });
+            }
+        }
+
+        // Expose live GPS hook for C# updates
+        window.updateDriverPosition = function(lat, lon, heading) {
+            var mapEl = document.getElementById('map');
+            if (driverMarker) {
+                driverMarker.setLatLng([lat, lon]);
+            }
+            map.panTo([lat, lon], { animate: false });
+            if (typeof heading === 'number') {
+                mapEl.style.setProperty('--map-bearing', (-heading) + 'deg');
+            }
+        };
+
+        // Smoothly interpolate between route coordinates
+        function generateSmoothPath(coords) {
+            var result = [];
+            for (var i = 0; i < coords.length - 1; i++) {
+                var p1 = coords[i];
+                var p2 = coords[i + 1];
+                var dLat = p2[0] - p1[0];
+                var dLon = p2[1] - p1[1];
+                var distApprox = Math.hypot(dLat, dLon);
+                var steps = Math.max(6, Math.min(30, Math.round(distApprox * 3500)));
+                for (var s = 0; s < steps; s++) {
+                    var t = s / steps;
+                    result.push([p1[0] + dLat * t, p1[1] + dLon * t]);
+                }
+            }
+            result.push(coords[coords.length - 1]);
+            return result;
+        }
+
+        function getBearing(c1, c2) {
+            var lat1 = c1[0] * Math.PI / 180;
+            var lat2 = c2[0] * Math.PI / 180;
+            var dLon = (c2[1] - c1[1]) * Math.PI / 180;
+            var y = Math.sin(dLon) * Math.cos(lat2);
+            var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            var brng = Math.atan2(y, x) * 180 / Math.PI;
+            return (brng + 360) % 360;
         }
     </script>
 </body>
