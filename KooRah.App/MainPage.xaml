@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KooRah.App.MainPage"
+             Title="KooRah">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <Label x:Name="StatusLabel"
+               Grid.Row="0"
+               Text="Loading graph..."
+               Padding="12,8"
+               FontSize="14" />
+
+        <Button x:Name="FindRouteButton"
+                Grid.Row="1"
+                Text="Find Route"
+                Margin="12,0,12,8"
+                Clicked="OnFindRouteClicked"
+                IsEnabled="False" />
+
+        <WebView x:Name="MapView"
+                 Grid.Row="2" />
+
+    </Grid>
+
+</ContentPage>

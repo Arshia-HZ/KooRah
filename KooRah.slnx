@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="KooRah.App/KooRah.App.csproj" />
   <Project Path="KooRah.ConsoleTest/KooRah.ConsoleTest.csproj" />
   <Project Path="KooRah.Core.csproj" />
 </Solution>

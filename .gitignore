@@ -13,5 +13,5 @@ obj/
 *.launchSettings.json
 
 ## Large Data & Archives
-koorah.zip
+*.zip
 *.pbf
