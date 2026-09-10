@@ -27,7 +27,7 @@
             overflow: hidden;
             box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
             margin-right: 16px !important;
-            margin-top: 60px !important;
+            margin-top: 140px !important;
         }
         .leaflet-control-zoom a {
             background-color: #1B232C !important;
@@ -41,6 +41,27 @@
         .leaflet-control-zoom a:hover {
             background-color: #242F3B !important;
             color: #23A6A0 !important;
+        }
+        .leaflet-control-layers {
+            background-color: #1B232C !important;
+            color: #EDEFF2 !important;
+            border: 1px solid #222C38 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+            margin-right: 16px !important;
+            margin-top: 140px !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            padding: 8px 12px !important;
+        }
+        .leaflet-control-layers-toggle {
+            background-color: #1B232C !important;
+            border-radius: 8px !important;
+        }
+        .leaflet-control-layers label {
+            color: #EDEFF2 !important;
+            margin-bottom: 4px !important;
+            cursor: pointer;
         }
         .leaflet-control-attribution {
             background-color: rgba(16, 21, 27, 0.75) !important;
@@ -109,12 +130,23 @@
             attributionControl: true
         }).setView(startCoord, 14);
 
-        // CartoDB Dark Matter tiles (night-driving-first OSM tiles)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // 1. Navigation Streets layer (Esri World Street Map - warm, balanced, high clarity, NO watermark/key)
+        var streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            attribution: 'Tiles &copy; Esri &mdash; Tehran Road Network'
         }).addTo(map);
+
+        // 2. OpenStreetMap Standard layer (Detailed community map - full Persian labels, NO watermark/key)
+        var osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+
+        // Layer Switcher Control (allows one-click toggle between styles)
+        L.control.layers({
+            "Navigation Streets": streetLayer,
+            "OpenStreetMap": osmLayer
+        }, null, { position: 'topright' }).addTo(map);
 
         // Custom minimalist night markers
         var startIcon = L.divIcon({
