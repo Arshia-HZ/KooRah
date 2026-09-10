@@ -12,10 +12,12 @@
         <!-- Full-Bleed Map Hero Layer -->
         <WebView x:Name="MapView"
                  HorizontalOptions="Fill"
-                 VerticalOptions="Fill" />
+                 VerticalOptions="Fill"
+                 Navigating="OnMapViewNavigating" />
 
         <!-- TOP: Floating Search & Status Card -->
-        <VerticalStackLayout VerticalOptions="Start"
+        <VerticalStackLayout x:Name="TopSearchCard"
+                             VerticalOptions="Start"
                              Margin="16, 20, 16, 0"
                              Spacing="6">
 
@@ -59,7 +61,7 @@
                                 BackgroundColor="#10151B"
                                 Padding="10, 2">
                             <Entry x:Name="OriginEntry"
-                                   Placeholder="Origin (e.g. My Location, Azadi)"
+                                   Placeholder="مبدا"
                                    PlaceholderColor="#5F6D7E"
                                    TextColor="#EDEFF2"
                                    FontFamily="Manrope"
@@ -94,7 +96,7 @@
                             BackgroundColor="#10151B"
                             Padding="10, 2">
                         <Entry x:Name="DestinationEntry"
-                               Placeholder="Destination (e.g. Tajrish, Milad Tower)"
+                               Placeholder="مقصد"
                                PlaceholderColor="#5F6D7E"
                                TextColor="#EDEFF2"
                                FontFamily="Manrope"
@@ -162,11 +164,37 @@
             </Border>
         </VerticalStackLayout>
 
+        <!-- Floating Re-center Button (Google Maps Style: Appears when user pans away during navigation) -->
+        <Button x:Name="RecenterButton"
+                Text="⌖ Re-center"
+                FontFamily="Manrope"
+                FontSize="14"
+                FontAttributes="Bold"
+                TextColor="#23A6A0"
+                BackgroundColor="#1B232C"
+                BorderColor="#23A6A0"
+                BorderWidth="1.5"
+                CornerRadius="24"
+                HeightRequest="44"
+                Padding="22, 0"
+                HorizontalOptions="Center"
+                VerticalOptions="End"
+                Margin="0, 0, 0, 134"
+                IsVisible="False"
+                Clicked="OnRecenterClicked">
+            <Button.Shadow>
+                <Shadow Brush="#05080C"
+                        Offset="0, 6"
+                        Radius="16"
+                        Opacity="0.75" />
+            </Button.Shadow>
+        </Button>
+
         <!-- BOTTOM: Floating Route & ETA Sheet Card -->
         <Border HorizontalOptions="Fill"
                 VerticalOptions="End"
                 Margin="16, 0, 16, 28"
-                Padding="24, 20"
+                Padding="20, 18"
                 StrokeShape="RoundRectangle 24"
                 StrokeThickness="1"
                 Stroke="#222C38"
@@ -179,53 +207,110 @@
             </Border.Shadow>
 
             <VerticalStackLayout Spacing="16">
-                <!-- Metrics Row: Big ETA on left, Distance on right -->
-                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-                    <VerticalStackLayout Grid.Column="0" Spacing="2">
-                        <Label x:Name="EtaLabel"
-                               Text="-- min"
-                               FontFamily="SpaceGrotesk"
-                               FontSize="38"
+                <!-- Overview Panel (Idle & Route Calculated) -->
+                <VerticalStackLayout x:Name="OverviewPanel" Spacing="16">
+                    <!-- Metrics Row: Big ETA on left, Distance on right -->
+                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label x:Name="EtaLabel"
+                                   Text="-- دقیقه"
+                                   FontFamily="SpaceGrotesk"
+                                   FontSize="38"
+                                   FontAttributes="Bold"
+                                   TextColor="#EDEFF2" />
+                            <Label x:Name="AlgorithmDetailsLabel"
+                                   Text="مبدا و مقصد را انتخاب کنید"
+                                   FontFamily="Manrope"
+                                   FontSize="13"
+                                   TextColor="#8B96A3" />
+                        </VerticalStackLayout>
+
+                        <Label x:Name="DistanceLabel"
+                               Grid.Column="1"
+                               Text=""
+                               FontFamily="Manrope"
+                               FontSize="20"
                                FontAttributes="Bold"
-                               TextColor="#EDEFF2" />
-                        <Label x:Name="AlgorithmDetailsLabel"
-                               Text="Set origin &amp; destination"
+                               TextColor="#EDEFF2"
+                               VerticalOptions="Start"
+                               Margin="0, 8, 0, 0" />
+                    </Grid>
+
+                    <!-- Amber delay/warning label -->
+                    <Label x:Name="WarningLabel"
+                           Text=""
+                           FontFamily="Manrope"
+                           FontSize="12"
+                           TextColor="#E0A458"
+                           IsVisible="False" />
+
+                    <!-- Single Accent Action Button -->
+                    <Button x:Name="FindRouteButton"
+                            Text="مسیریابی"
+                            FontFamily="Manrope"
+                            FontSize="16"
+                            FontAttributes="Bold"
+                            TextColor="#10151B"
+                            BackgroundColor="#23A6A0"
+                            CornerRadius="16"
+                            HeightRequest="52"
+                            Clicked="OnFindRouteClicked"
+                            IsEnabled="False" />
+                </VerticalStackLayout>
+
+                <!-- Active Navigation Panel (Google Maps Style) -->
+                <Grid x:Name="ActiveNavPanel"
+                      ColumnDefinitions="Auto, *, Auto"
+                      ColumnSpacing="14"
+                      VerticalOptions="Center"
+                      IsVisible="False">
+                    <!-- Exit Navigation Circular Button -->
+                    <Button x:Name="ExitNavButton"
+                            Grid.Column="0"
+                            Text="✕"
+                            FontFamily="Manrope"
+                            FontSize="18"
+                            FontAttributes="Bold"
+                            TextColor="#EDEFF2"
+                            BackgroundColor="#26313E"
+                            BorderColor="#334253"
+                            BorderWidth="1"
+                            CornerRadius="24"
+                            WidthRequest="48"
+                            HeightRequest="48"
+                            Padding="0"
+                            Clicked="OnExitNavClicked" />
+
+                    <!-- Live Navigation ETA & Arrival -->
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                        <Label x:Name="NavEtaLabel"
+                               Text="-- دقیقه"
+                               FontFamily="SpaceGrotesk"
+                               FontSize="32"
+                               FontAttributes="Bold"
+                               TextColor="#23A6A0" />
+                        <Label x:Name="NavDetailsLabel"
+                               Text="-- km • --:--"
                                FontFamily="Manrope"
                                FontSize="13"
                                TextColor="#8B96A3" />
                     </VerticalStackLayout>
 
-                    <Label x:Name="DistanceLabel"
-                           Grid.Column="1"
-                           Text=""
-                           FontFamily="Manrope"
-                           FontSize="20"
-                           FontAttributes="Bold"
-                           TextColor="#EDEFF2"
-                           VerticalOptions="Start"
-                           Margin="0, 8, 0, 0" />
+                    <!-- Vehicle Switcher Button -->
+                    <Button x:Name="VehicleSwitchButton"
+                            Grid.Column="2"
+                            Text="🚗"
+                            ToolTipProperties.Text="Switch 3D Car Model"
+                            FontSize="20"
+                            BackgroundColor="#26313E"
+                            BorderColor="#334253"
+                            BorderWidth="1"
+                            CornerRadius="24"
+                            WidthRequest="48"
+                            HeightRequest="48"
+                            Padding="0"
+                            Clicked="OnVehicleSwitchClicked" />
                 </Grid>
-
-                <!-- Amber delay/warning label -->
-                <Label x:Name="WarningLabel"
-                       Text=""
-                       FontFamily="Manrope"
-                       FontSize="12"
-                       TextColor="#E0A458"
-                       IsVisible="False" />
-
-                <!-- Single Accent Action Button -->
-                <Button x:Name="FindRouteButton"
-                        Text="Find Route"
-                        FontFamily="Manrope"
-                        FontSize="16"
-                        FontAttributes="Bold"
-                        TextColor="#10151B"
-                        BackgroundColor="#23A6A0"
-                        CornerRadius="16"
-                        HeightRequest="52"
-                        Clicked="OnFindRouteClicked"
-                        IsEnabled="False" />
             </VerticalStackLayout>
         </Border>
 

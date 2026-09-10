@@ -13,52 +13,183 @@
             background-color: #10151B;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
         }
+
+        /* 3D Viewport Architecture */
+        #map-viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            perspective: 850px;
+            perspective-origin: 50% 65%;
+            background-color: #10151B;
+        }
+
+        /* Map Stage: 100% in 2D overview for pixel-perfect fitBounds; expands in 3D for infinite horizon */
+        #map-stage {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-origin: 50% 50%;
+            transform: rotateX(0deg) rotateZ(0deg) translateY(0);
+            transition: transform 0.45s cubic-bezier(0.2, 0.85, 0.3, 1);
+        }
+
+        /* 3D Driver Perspective Navigation Mode (48° Forward Angle + Heading Lock + Full Horizon) */
+        #map-viewport.nav-mode #map-stage {
+            width: 340%;
+            height: 340%;
+            top: -120%;
+            left: -120%;
+            transform: translateY(16vh) rotateX(48deg) rotateZ(var(--map-bearing, 0deg)) scale(1.22);
+        }
+
+        /* Manual 3D Mode in Overview */
+        #map-viewport.mode-3d:not(.nav-mode) #map-stage {
+            width: 160%;
+            height: 160%;
+            top: -30%;
+            left: -30%;
+            transform: translateY(-2%) rotateX(42deg) rotateZ(0deg) scale(1.1);
+        }
+
         #map {
             width: 100%;
             height: 100%;
             background-color: #10151B;
+        }
+
+        /* Atmospheric Horizon Fog */
+        .horizon-fog {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to bottom, #10151B 0%, rgba(16, 21, 27, 0.75) 45%, transparent 100%);
+            pointer-events: none;
+            z-index: 850;
+            display: none;
+        }
+        #map-viewport.nav-mode .horizon-fog,
+        #map-viewport.mode-3d .horizon-fog {
+            display: block;
+        }
+
+        /* Top Driving Maneuver Banner (Google Maps Navigation Banner Style) */
+        .maneuver-banner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 950;
+            background: linear-gradient(135deg, #0A453E, #052B28);
+            border-bottom: 1px solid #145950;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            padding: 14px 18px;
+            display: none;
+            align-items: center;
+            gap: 16px;
+            animation: slideDown 0.35s ease-out forwards;
+        }
+        .maneuver-banner.active {
+            display: flex;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .maneuver-icon-box {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: #FFFFFF;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .maneuver-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
             overflow: hidden;
-            perspective: 750px;
+        }
+        .maneuver-distance {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38D9CE;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .maneuver-street {
+            font-size: 16px;
+            font-weight: 700;
+            color: #FFFFFF;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* 3D Driver Follow Navigation Mode (Dynamic Bearing Rotation) */
-        #map.nav-mode .leaflet-map-pane {
-            transform: rotateZ(var(--map-bearing, 0deg)) rotateX(55deg) translateY(20%);
-            transform-origin: 50% 50%;
-            transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.25, 1);
+        /* Floating Re-center Button (Google Maps Style: Centered directly above bottom sheet) */
+        .btn-recenter {
+            position: absolute;
+            bottom: 134px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 950;
+            background-color: #1B232C;
+            color: #23A6A0;
+            border: 1.5px solid #23A6A0;
+            border-radius: 28px;
+            padding: 10px 22px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.2s ease, background-color 0.2s ease;
         }
-        #map:not(.nav-mode):not(.mode-3d) .leaflet-map-pane {
-            transform: rotateX(0deg) rotateZ(0deg) translateY(0);
-            transform-origin: 50% 50%;
-            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.25, 1);
+        .btn-recenter:hover {
+            background-color: #242F3B;
+            transform: translateX(-50%) scale(1.04);
         }
-        #map.mode-3d:not(.nav-mode) .leaflet-map-pane {
-            transform: rotateX(48deg) translateY(-8%) scale(1.08);
-            transform-origin: 50% 82%;
-            transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
+        .btn-recenter.visible {
+            display: flex;
+            animation: popIn 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+        }
+        @keyframes popIn {
+            from { transform: translateX(-50%) scale(0.8); opacity: 0; }
+            to { transform: translateX(-50%) scale(1); opacity: 1; }
         }
 
-        /* Map Controls Container in Bottom-Right (Clear of Top Search & Above Bottom Sheet) */
-        .leaflet-bottom.leaflet-right {
-            bottom: 240px !important;
-            right: 16px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: flex-end !important;
-            gap: 10px !important;
-            z-index: 800 !important;
+        /* Floating 2D Controls (Bottom-Right, Clear of Bottom Sheet & Search) */
+        .floating-controls-right {
+            position: absolute;
+            bottom: 125px;
+            right: 16px;
+            z-index: 900;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
         }
-        .leaflet-bottom.leaflet-right .leaflet-control {
-            margin: 0 !important;
-            float: none !important;
-            clear: both !important;
-        }
-
-        /* 3D / 2D Perspective Toggle Button */
-        .btn-3d-toggle {
-            width: 38px;
-            height: 38px;
+        .btn-ctrl {
+            width: 40px;
+            height: 40px;
             border-radius: 12px;
             background-color: #1B232C;
             color: #EDEFF2;
@@ -71,75 +202,37 @@
             font-weight: 700;
             font-size: 13px;
             cursor: pointer;
-            user-select: none;
-            transition: all 0.25s ease;
+            transition: all 0.2s ease;
         }
-        .btn-3d-toggle:hover {
+        .btn-ctrl:hover {
             background-color: #242F3B;
             color: #23A6A0;
         }
-        .btn-3d-toggle.active {
+        .btn-ctrl.active {
             background-color: #23A6A0;
             color: #10151B;
             border-color: #23A6A0;
             box-shadow: 0 4px 16px rgba(35, 166, 160, 0.35);
         }
-
-        /* Dark Mode overrides for Leaflet UI controls */
-        .leaflet-control-zoom {
-            border: 1px solid #222C38 !important;
-            border-radius: 12px !important;
+        .zoom-group {
+            display: flex;
+            flex-direction: column;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+            border: 1px solid #222C38;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
         }
-        .leaflet-control-zoom a {
-            background-color: #1B232C !important;
-            color: #EDEFF2 !important;
+        .zoom-group .btn-ctrl {
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            font-size: 18px;
+        }
+        .zoom-top {
             border-bottom: 1px solid #222C38 !important;
-            width: 38px !important;
-            height: 38px !important;
-            line-height: 38px !important;
-            font-size: 16px !important;
-        }
-        .leaflet-control-zoom a:hover {
-            background-color: #242F3B !important;
-            color: #23A6A0 !important;
         }
 
-        .leaflet-control-layers {
-            background-color: #1B232C !important;
-            color: #EDEFF2 !important;
-            border: 1px solid #222C38 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
-            font-family: inherit !important;
-            font-size: 12px !important;
-            padding: 8px 12px !important;
-        }
-        .leaflet-control-layers-toggle {
-            background-color: #1B232C !important;
-            border-radius: 10px !important;
-            width: 38px !important;
-            height: 38px !important;
-        }
-        .leaflet-control-layers label {
-            color: #EDEFF2 !important;
-            margin-bottom: 4px !important;
-            cursor: pointer;
-        }
-
-        .leaflet-control-attribution {
-            background-color: rgba(16, 21, 27, 0.75) !important;
-            color: #8B96A3 !important;
-            font-size: 10px !important;
-            backdrop-filter: blur(4px);
-        }
-        .leaflet-control-attribution a {
-            color: #8B96A3 !important;
-            text-decoration: none;
-        }
-
-        /* Custom Modern Pin Marker Icons */
+        /* Custom Pins */
         .map-pin {
             display: flex;
             align-items: center;
@@ -150,26 +243,33 @@
             background-color: #10151B;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
         }
-        .pin-start {
-            border: 3px solid #23A6A0;
+        .pin-start { border: 3px solid #23A6A0; }
+        .pin-start-inner { width: 8px; height: 8px; border-radius: 50%; background-color: #23A6A0; }
+        .pin-dest { border: 3px solid #EDEFF2; }
+        .pin-dest-inner { width: 8px; height: 8px; border-radius: 50%; background-color: #EDEFF2; }
+
+        /* 3D Car Marker Avatar with Dynamic Heading Rotation */
+        .car-marker-container {
+            width: 48px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transform: rotate(var(--car-heading, 0deg));
+            transition: transform 0.25s ease;
         }
-        .pin-start-inner {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #23A6A0;
+        .car-3d-svg {
+            width: 46px;
+            height: 62px;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.65));
+            transition: transform 0.2s ease;
         }
-        .pin-dest {
-            border: 3px solid #EDEFF2;
-        }
-        .pin-dest-inner {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #EDEFF2;
+        .car-marker-container:hover .car-3d-svg {
+            transform: scale(1.08);
         }
 
-        /* Driver Navigation Vehicle Puck */
+        /* Fallback Chevron Puck */
         .driver-puck {
             position: relative;
             width: 36px;
@@ -198,12 +298,28 @@
             justify-content: center;
             filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
         }
-        .driver-arrow {
-            width: 28px;
-            height: 28px;
+        .driver-arrow { width: 28px; height: 28px; }
+
+        /* Vehicle Switch Toast Hint */
+        .vehicle-toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 990;
+            background: #1B232C;
+            border: 1px solid #2A3847;
+            color: #EDEFF2;
+            padding: 7px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            display: none;
+            pointer-events: none;
         }
 
-        /* Dark popup */
+        /* Popups */
         .leaflet-popup-content-wrapper {
             background-color: #1B232C !important;
             color: #EDEFF2 !important;
@@ -211,13 +327,49 @@
             border-radius: 12px !important;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
         }
-        .leaflet-popup-tip {
-            background-color: #1B232C !important;
-        }
+        .leaflet-popup-tip { background-color: #1B232C !important; }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <div id="map-viewport">
+        <!-- Atmospheric Horizon Fog -->
+        <div class="horizon-fog"></div>
+
+        <!-- Map Stage Container -->
+        <div id="map-stage">
+            <div id="map"></div>
+        </div>
+
+        <!-- Top Maneuver Banner (Driving Mode) -->
+        <div id="maneuverBanner" class="maneuver-banner">
+            <div id="maneuverIcon" class="maneuver-icon-box">⬆</div>
+            <div class="maneuver-details">
+                <div id="maneuverDistance" class="maneuver-distance">Starting route</div>
+                <div id="maneuverStreet" class="maneuver-street">Follow the highlighted path</div>
+            </div>
+        </div>
+
+        <!-- Floating Re-center Button (Bottom-Left above bottom card) -->
+        <button id="btnRecenter" class="btn-recenter" onclick="recenterMap()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            Re-center
+        </button>
+
+        <!-- Floating 2D Controls (Bottom-Right, Clear of Search & Bottom Sheet) -->
+        <div class="floating-controls-right">
+            <div id="btn3D" class="btn-ctrl" onclick="toggle3D()" title="Toggle 3D Perspective">2D</div>
+            <div class="zoom-group">
+                <button class="btn-ctrl zoom-top" onclick="map.zoomIn()" title="Zoom In">+</button>
+                <button class="btn-ctrl zoom-bottom" onclick="map.zoomOut()" title="Zoom Out">−</button>
+            </div>
+            <div id="btnLayers" class="btn-ctrl" onclick="toggleLayer()" title="Switch Map Layer">🗺️</div>
+        </div>
+
+        <!-- Vehicle switch toast -->
+        <div id="vehicleToast" class="vehicle-toast">Vehicle: White Sedan</div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -232,50 +384,38 @@
             attributionControl: false
         }).setView(startCoord, initialZoom);
 
-        // 1. Navigation Streets layer (Esri World Street Map - warm, high clarity, NO watermark/key)
+        // 1. Navigation Streets layer (Esri World Street Map)
         var streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             updateWhenIdle: true,
             updateWhenZooming: false,
-            keepBuffer: 1,
+            keepBuffer: 2,
             attribution: 'Tiles &copy; Esri &mdash; Tehran Road Network'
         }).addTo(map);
 
-        // 2. OpenStreetMap Standard layer (Detailed community map - full Persian labels, NO watermark/key)
+        // 2. OpenStreetMap Standard layer
         var osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             updateWhenIdle: true,
             updateWhenZooming: false,
-            keepBuffer: 1,
+            keepBuffer: 2,
             attribution: '&copy; OpenStreetMap contributors'
         });
 
-        // 3D Perspective Toggle Custom Control
-        var Toggle3DControl = L.Control.extend({
-            options: { position: 'bottomright' },
-            onAdd: function(map) {
-                var btn = L.DomUtil.create('div', 'btn-3d-toggle');
-                btn.id = 'btn3D';
-                btn.innerHTML = '3D';
-                btn.title = 'Toggle 3D Perspective';
-                L.DomEvent.disableClickPropagation(btn);
-                btn.onclick = function() { toggle3D(); };
-                return btn;
+        var currentLayer = 'esri';
+        function toggleLayer() {
+            if (currentLayer === 'esri') {
+                map.removeLayer(streetLayer);
+                osmLayer.addTo(map);
+                currentLayer = 'osm';
+                showToast('Map: OpenStreetMap');
+            } else {
+                map.removeLayer(osmLayer);
+                streetLayer.addTo(map);
+                currentLayer = 'esri';
+                showToast('Map: Navigation Streets');
             }
-        });
-        map.addControl(new Toggle3DControl());
-
-        // Zoom Controls in Bottom Right
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        // Layer Switcher Control in Bottom Right
-        L.control.layers({
-            "Navigation Streets": streetLayer,
-            "OpenStreetMap": osmLayer
-        }, null, { position: 'bottomright' }).addTo(map);
-
-        // Attribution in Bottom Left (Unobtrusive)
-        L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map);
+        }
 
         // Custom minimalist markers
         var startIcon = L.divIcon({
@@ -298,7 +438,7 @@
             destMarker = L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('__END_TITLE__');
         }
 
-        // 3D Perspective Toggle Engine
+        // 3D Perspective Toggle Engine (2D/3D Button: shows "3D" when in 3D, "2D" when in 2D)
         var is3D = false;
         function toggle3D(forceState) {
             if (typeof forceState === 'boolean') {
@@ -306,26 +446,43 @@
             } else {
                 is3D = !is3D;
             }
-            var mapEl = document.getElementById('map');
+            var vp = document.getElementById('map-viewport');
             var btn = document.getElementById('btn3D');
-            if (is3D) {
-                mapEl.classList.add('mode-3d');
-                if (btn) {
-                    btn.classList.add('active');
-                    btn.innerText = '2D';
+
+            if (isNavigating) {
+                if (is3D) {
+                    vp.classList.add('nav-mode');
+                    if (btn) {
+                        btn.classList.add('active');
+                        btn.innerText = '3D';
+                    }
+                } else {
+                    vp.classList.remove('nav-mode');
+                    if (btn) {
+                        btn.classList.remove('active');
+                        btn.innerText = '2D';
+                    }
                 }
             } else {
-                mapEl.classList.remove('mode-3d');
-                if (btn) {
-                    btn.classList.remove('active');
-                    btn.innerText = '3D';
+                if (is3D) {
+                    vp.classList.add('mode-3d');
+                    if (btn) {
+                        btn.classList.add('active');
+                        btn.innerText = '3D';
+                    }
+                } else {
+                    vp.classList.remove('mode-3d');
+                    if (btn) {
+                        btn.classList.remove('active');
+                        btn.innerText = '2D';
+                    }
                 }
             }
+            map.invalidateSize();
         }
 
         var corePolyline = null;
         if (routeCoords && routeCoords.length > 0) {
-            // Soft turquoise glow underneath
             L.polyline(routeCoords, {
                 color: '#23A6A0',
                 weight: 12,
@@ -334,7 +491,6 @@
                 lineCap: 'round'
             }).addTo(map);
 
-            // Core Persian turquoise polyline
             corePolyline = L.polyline(routeCoords, {
                 color: '#23A6A0',
                 weight: 6,
@@ -343,145 +499,394 @@
                 lineCap: 'round'
             }).addTo(map);
 
-            // Fit bounds with comfortable padding for top search card and bottom sheet
-            map.fitBounds(corePolyline.getBounds(), {
-                paddingTopLeft: [140, 40],
-                paddingBottomRight: [40, 240]
-            });
+            // Responsive bounds fitting so the entire route is clear of search card and bottom card
+            fitRouteBounds();
+            setTimeout(fitRouteBounds, 250);
+            setTimeout(fitRouteBounds, 600);
         } else if (destMarker) {
             var group = L.featureGroup([startMarker, destMarker]);
-            map.fitBounds(group.getBounds().pad(0.3), {
-                paddingTopLeft: [140, 40],
-                paddingBottomRight: [40, 240]
+            map.fitBounds(group.getBounds().pad(0.35), {
+                paddingTopLeft: [45, 270],
+                paddingBottomRight: [75, 310]
             });
         } else {
-            // Single tile startup: local view centered on origin
             map.setView(startCoord, 15);
         }
 
-        // -------------------------------------------------------------
-        // Driver Follow 3D Navigation Engine
-        // -------------------------------------------------------------
-        var drivingInterval = null;
-        var driverMarker = null;
+        window.addEventListener('resize', function() {
+            if (!isNavigating && corePolyline) {
+                fitRouteBounds();
+            }
+        });
 
-        function startDriving() {
-            if (!routeCoords || routeCoords.length < 2) return;
+        function fitRouteBounds() {
+            if (!corePolyline) return;
+            map.invalidateSize();
 
-            stopDriving(); // clean up any previous session
+            var bounds = corePolyline.getBounds();
+            if (startMarker) bounds.extend(startMarker.getLatLng());
+            if (destMarker) bounds.extend(destMarker.getLatLng());
 
-            var mapEl = document.getElementById('map');
-            mapEl.classList.add('nav-mode');
-            mapEl.classList.remove('mode-3d');
+            var containerH = map.getSize().y || window.innerHeight || 800;
+            var containerW = map.getSize().x || window.innerWidth || 400;
 
-            var btn = document.getElementById('btn3D');
-            if (btn) {
-                btn.classList.add('active');
-                btn.innerText = '2D';
+            // Safe padding values:
+            // Top: search card (~165px) + margin (20px) + status bar (40px) = 225px minimum.
+            // Generous padding of 270px gives 45px clear margin under search card.
+            var topPad = Math.max(270, Math.round(containerH * 0.28));
+
+            // Bottom: bottom card (~190px) + margin (28px) + nav bar (35px) = 253px minimum.
+            // Generous padding of 310px gives 55px clear margin above bottom card.
+            var bottomPad = Math.max(310, Math.round(containerH * 0.33));
+
+            var leftPad = Math.max(45, Math.round(containerW * 0.08));
+            var rightPad = Math.max(75, Math.round(containerW * 0.12));
+
+            // Prevent padding from occupying > 80% of viewport on very compact screens
+            if (topPad + bottomPad > containerH * 0.80) {
+                var maxAllowed = containerH * 0.80;
+                var ratio = maxAllowed / (topPad + bottomPad);
+                topPad = Math.round(topPad * ratio);
+                bottomPad = Math.round(bottomPad * ratio);
             }
 
-            // Create driver vehicle marker
-            var driverIcon = L.divIcon({
-                className: 'driver-vehicle-icon',
-                html: '<div class="driver-puck"><div class="driver-pulse"></div><div class="driver-arrow-container"><svg viewBox="0 0 32 32" class="driver-arrow"><path d="M16 2 L29 27 L16 20 L3 27 Z" fill="#23A6A0" stroke="#EDEFF2" stroke-width="2.5" stroke-linejoin="round"/></svg></div></div>',
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
+            map.fitBounds(bounds, {
+                paddingTopLeft: [leftPad, topPad],
+                paddingBottomRight: [rightPad, bottomPad],
+                maxZoom: 16,
+                animate: false
             });
-
-            var startPos = routeCoords[0];
-            driverMarker = L.marker(startPos, { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
-            map.setView(startPos, 17, { animate: false });
-
-            // Initial bearing
-            var initialBearing = getBearing(routeCoords[0], routeCoords[1]);
-            mapEl.style.setProperty('--map-bearing', (-initialBearing) + 'deg');
-
-            // Generate interpolated micro-waypoints between route nodes for silky smooth movement
-            var waypoints = generateSmoothPath(routeCoords);
-            var waypointIndex = 0;
-
-            drivingInterval = setInterval(function() {
-                if (waypointIndex >= waypoints.length - 1) {
-                    clearInterval(drivingInterval);
-                    return;
-                }
-
-                waypointIndex++;
-                var cur = waypoints[waypointIndex];
-                var lookAhead = waypoints[Math.min(waypointIndex + 4, waypoints.length - 1)];
-
-                var heading = getBearing(cur, lookAhead);
-
-                // Update vehicle position
-                driverMarker.setLatLng(cur);
-
-                // Center map exactly on driver position
-                map.panTo(cur, { animate: false });
-
-                // Rotate map so camera stays directly behind the vehicle pointing forward
-                mapEl.style.setProperty('--map-bearing', (-heading) + 'deg');
-            }, 80);
         }
 
-        function stopDriving() {
-            if (drivingInterval) {
-                clearInterval(drivingInterval);
-                drivingInterval = null;
-            }
-
-            var mapEl = document.getElementById('map');
-            mapEl.classList.remove('nav-mode');
-            mapEl.style.setProperty('--map-bearing', '0deg');
-
-            var btn = document.getElementById('btn3D');
-            if (btn) {
-                btn.classList.remove('active');
-                btn.innerText = '3D';
-            }
-
-            if (driverMarker) {
-                map.removeLayer(driverMarker);
-                driverMarker = null;
-            }
-
-            if (routeCoords && routeCoords.length > 0 && corePolyline) {
-                map.fitBounds(corePolyline.getBounds(), {
-                    paddingTopLeft: [140, 40],
-                    paddingBottomRight: [40, 240]
-                });
-            }
-        }
-
-        // Expose live GPS hook for C# updates
-        window.updateDriverPosition = function(lat, lon, heading) {
-            var mapEl = document.getElementById('map');
-            if (driverMarker) {
-                driverMarker.setLatLng([lat, lon]);
-            }
-            map.panTo([lat, lon], { animate: false });
-            if (typeof heading === 'number') {
-                mapEl.style.setProperty('--map-bearing', (-heading) + 'deg');
+        // -------------------------------------------------------------
+        // 3D Vehicle Models (Rear-Perspective Google Maps Style)
+        // -------------------------------------------------------------
+        var VEHICLES = {
+            'sedan': {
+                name: 'White Sedan (Google Maps)',
+                svg: `<svg viewBox="0 0 54 72" class="car-3d-svg">
+  <ellipse cx="27" cy="48" rx="22" ry="12" fill="rgba(0,0,0,0.45)" filter="blur(2.5px)" />
+  <rect x="5" y="32" width="7" height="18" rx="3" fill="#15181C" />
+  <rect x="42" y="32" width="7" height="18" rx="3" fill="#15181C" />
+  <ellipse cx="4" cy="22" rx="3" ry="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="0.8" />
+  <ellipse cx="50" cy="22" rx="3" ry="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="0.8" />
+  <path d="M 8 28 Q 7 12 18 6 Q 27 4 36 6 Q 47 12 46 28 L 46 48 Q 46 54 40 56 L 14 56 Q 8 54 8 48 Z" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.2" />
+  <path d="M 16 7 Q 27 5 38 7 L 37 15 Q 27 13 17 15 Z" fill="#E2E8F0" />
+  <path d="M 13 16 Q 27 14 41 16 L 39 33 Q 27 31 15 33 Z" fill="#FFFFFF" />
+  <line x1="14" y1="17" x2="16" y2="32" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" />
+  <line x1="40" y1="17" x2="38" y2="32" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M 15 34 Q 27 32 39 34 L 42 45 Q 27 43 12 45 Z" fill="#1E293B" stroke="#0F172A" stroke-width="0.8" />
+  <path d="M 17 36 L 22 43 L 20 43 L 15 36 Z" fill="rgba(255,255,255,0.35)" />
+  <path d="M 12 46 Q 27 44 42 46 L 43 51 Q 27 50 11 51 Z" fill="#F1F5F9" />
+  <path d="M 9 47 L 15 47 L 14 51 L 8 50 Z" fill="#EF4444" stroke="#DC2626" stroke-width="0.6" filter="drop-shadow(0 0 3px rgba(239,68,68,0.8))" />
+  <path d="M 39 47 L 45 47 L 46 50 L 40 51 Z" fill="#EF4444" stroke="#DC2626" stroke-width="0.6" filter="drop-shadow(0 0 3px rgba(239,68,68,0.8))" />
+  <rect x="21" y="49" width="12" height="4.5" rx="1" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.5" />
+  <path d="M 10 52 Q 27 51 44 52 L 42 56 Q 27 55 12 56 Z" fill="#334155" />
+</svg>`
+            },
+            'sport': {
+                name: 'Turquoise Sports Car',
+                svg: `<svg viewBox="0 0 54 72" class="car-3d-svg">
+  <ellipse cx="27" cy="48" rx="22" ry="12" fill="rgba(0,0,0,0.45)" filter="blur(2.5px)" />
+  <rect x="4" y="32" width="7" height="19" rx="3" fill="#111827" />
+  <rect x="43" y="32" width="7" height="19" rx="3" fill="#111827" />
+  <ellipse cx="3" cy="22" rx="3" ry="2" fill="#1A7F7B" />
+  <ellipse cx="51" cy="22" rx="3" ry="2" fill="#1A7F7B" />
+  <path d="M 8 28 Q 7 10 19 5 Q 27 3 35 5 Q 47 10 46 28 L 46 48 Q 46 54 39 56 L 15 56 Q 8 54 8 48 Z" fill="#23A6A0" stroke="#17827C" stroke-width="1.2" />
+  <path d="M 23 4 L 25 33 L 29 33 L 31 4 Z" fill="#0F172A" />
+  <path d="M 14 16 Q 27 14 40 16 L 38 33 Q 27 31 16 33 Z" fill="#2AB8B1" />
+  <path d="M 15 34 Q 27 32 39 34 L 42 45 Q 27 43 12 45 Z" fill="#0F172A" stroke="#020617" stroke-width="0.8" />
+  <path d="M 17 36 L 22 43 L 20 43 L 15 36 Z" fill="rgba(255,255,255,0.3)" />
+  <path d="M 6 49 L 48 49 L 46 52 L 8 52 Z" fill="#0F172A" />
+  <path d="M 8 46 L 15 46 L 14 50 L 7 49 Z" fill="#FF3344" filter="drop-shadow(0 0 4px #FF3344)" />
+  <path d="M 39 46 L 46 46 L 47 49 L 40 50 Z" fill="#FF3344" filter="drop-shadow(0 0 4px #FF3344)" />
+  <path d="M 10 52 Q 27 51 44 52 L 42 56 Q 27 55 12 56 Z" fill="#0F172A" />
+</svg>`
+            },
+            'suv': {
+                name: 'Amber SUV',
+                svg: `<svg viewBox="0 0 54 72" class="car-3d-svg">
+  <ellipse cx="27" cy="48" rx="23" ry="13" fill="rgba(0,0,0,0.45)" filter="blur(2.5px)" />
+  <rect x="4" y="30" width="8" height="21" rx="3" fill="#1C1917" />
+  <rect x="42" y="30" width="8" height="21" rx="3" fill="#1C1917" />
+  <path d="M 7 28 Q 6 12 17 7 Q 27 5 37 7 Q 48 12 47 28 L 47 50 Q 47 56 40 57 L 14 57 Q 7 56 7 50 Z" fill="#E0A458" stroke="#B47B33" stroke-width="1.2" />
+  <rect x="13" y="15" width="28" height="19" rx="3" fill="#F3BA72" />
+  <line x1="11" y1="16" x2="11" y2="33" stroke="#292524" stroke-width="2" />
+  <line x1="43" y1="16" x2="43" y2="33" stroke="#292524" stroke-width="2" />
+  <line x1="11" y1="20" x2="43" y2="20" stroke="#44403C" stroke-width="1.5" />
+  <line x1="11" y1="29" x2="43" y2="29" stroke="#44403C" stroke-width="1.5" />
+  <path d="M 14 35 Q 27 33 40 35 L 43 47 Q 27 45 11 47 Z" fill="#1C1917" />
+  <path d="M 8 48 L 15 48 L 14 53 L 7 52 Z" fill="#EF4444" filter="drop-shadow(0 0 3px #EF4444)" />
+  <path d="M 39 48 L 46 48 L 47 52 L 40 53 Z" fill="#EF4444" filter="drop-shadow(0 0 3px #EF4444)" />
+  <circle cx="27" cy="48" r="7" fill="#292524" stroke="#1C1917" stroke-width="1.5" />
+  <circle cx="27" cy="48" r="3" fill="#78716C" />
+</svg>`
+            },
+            'arrow': {
+                name: 'High-Tech Navigation Chevron',
+                svg: `<div class="driver-puck"><div class="driver-pulse"></div><div class="driver-arrow-container"><svg viewBox="0 0 32 32" class="driver-arrow"><path d="M16 2 L29 27 L16 20 L3 27 Z" fill="#23A6A0" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round"/></svg></div></div>`
             }
         };
 
-        // Smoothly interpolate between route coordinates
-        function generateSmoothPath(coords) {
-            var result = [];
-            for (var i = 0; i < coords.length - 1; i++) {
-                var p1 = coords[i];
-                var p2 = coords[i + 1];
-                var dLat = p2[0] - p1[0];
-                var dLon = p2[1] - p1[1];
-                var distApprox = Math.hypot(dLat, dLon);
-                var steps = Math.max(6, Math.min(30, Math.round(distApprox * 3500)));
-                for (var s = 0; s < steps; s++) {
-                    var t = s / steps;
-                    result.push([p1[0] + dLat * t, p1[1] + dLon * t]);
+        var vehicleKeys = ['sedan', 'sport', 'suv', 'arrow'];
+        var currentVehicleKey = localStorage.getItem('koorah_vehicle') || 'sedan';
+
+        function createVehicleIcon(key) {
+            var v = VEHICLES[key] || VEHICLES['sedan'];
+            return L.divIcon({
+                className: 'car-marker-avatar',
+                html: `<div class="car-marker-container" style="transform: rotate(var(--car-heading, 0deg));" onclick="cycleVehicle()">${v.svg}</div>`,
+                iconSize: [48, 64],
+                iconAnchor: [24, 48]
+            });
+        }
+
+        function cycleVehicle() {
+            var idx = vehicleKeys.indexOf(currentVehicleKey);
+            idx = (idx + 1) % vehicleKeys.length;
+            currentVehicleKey = vehicleKeys[idx];
+            localStorage.setItem('koorah_vehicle', currentVehicleKey);
+
+            if (carMarker) {
+                carMarker.setIcon(createVehicleIcon(currentVehicleKey));
+            }
+
+            showToast('Vehicle: ' + VEHICLES[currentVehicleKey].name);
+        }
+
+        window.cycleVehicleFromApp = cycleVehicle;
+
+        function showToast(msg) {
+            var t = document.getElementById('vehicleToast');
+            if (t) {
+                t.innerText = msg;
+                t.style.display = 'block';
+                clearTimeout(window._toastTimer);
+                window._toastTimer = setTimeout(function() {
+                    t.style.display = 'none';
+                }, 2200);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Live Real GPS Driver Tracking, Camera Follow & Re-center
+        // -------------------------------------------------------------
+        var isNavigating = false;
+        var isUserFollowing = true;
+        var carMarker = null;
+        var currentCarPos = startCoord;
+        var currentBearing = 0;
+
+        // Only user dragging/panning pauses auto-follow (never programmatic zoom or setView)
+        map.on('dragstart', function() {
+            if (isNavigating) {
+                setFollowing(false);
+            }
+        });
+
+        // Native DOM touch/mouse listeners for guaranteed pan detection
+        var vpEl = document.getElementById('map-viewport');
+        vpEl.addEventListener('touchstart', function(e) {
+            if (isNavigating && !e.target.closest('.btn-ctrl, .btn-recenter, .maneuver-banner')) {
+                window._userIsTouching = true;
+            }
+        }, { passive: true });
+
+        vpEl.addEventListener('touchmove', function(e) {
+            if (isNavigating && window._userIsTouching) {
+                setFollowing(false);
+            }
+        }, { passive: true });
+
+        vpEl.addEventListener('mousedown', function(e) {
+            if (isNavigating && !e.target.closest('.btn-ctrl, .btn-recenter, .maneuver-banner')) {
+                window._userIsMouseDown = true;
+            }
+        });
+
+        vpEl.addEventListener('mousemove', function(e) {
+            if (isNavigating && window._userIsMouseDown) {
+                setFollowing(false);
+            }
+        });
+
+        window.addEventListener('mouseup', function() { window._userIsMouseDown = false; });
+        window.addEventListener('touchend', function() { window._userIsTouching = false; });
+
+        function setFollowing(following) {
+            isUserFollowing = following;
+            var btn = document.getElementById('btnRecenter');
+            if (btn) {
+                if (following) {
+                    btn.classList.remove('visible');
+                } else {
+                    btn.classList.add('visible');
                 }
             }
-            result.push(coords[coords.length - 1]);
-            return result;
+            // Send bridge notification to MAUI app
+            try {
+                window.location.href = following ? 'koorah://nav/following=1' : 'koorah://nav/following=0';
+            } catch(e) {}
         }
+
+        function recenterMap() {
+            if (!currentCarPos) return;
+            setFollowing(true);
+            map.panTo(currentCarPos, { animate: true });
+            var vp = document.getElementById('map-viewport');
+            if (vp) {
+                vp.style.setProperty('--map-bearing', (-currentBearing) + 'deg');
+                vp.style.setProperty('--car-heading', currentBearing + 'deg');
+            }
+        }
+
+        function startDriving() {
+            isNavigating = true;
+            isUserFollowing = true;
+            is3D = true;
+
+            var vp = document.getElementById('map-viewport');
+            vp.classList.add('nav-mode');
+            vp.classList.remove('mode-3d');
+
+            var banner = document.getElementById('maneuverBanner');
+            if (banner) banner.classList.add('active');
+
+            // Button shows "3D" when in 3D active mode
+            var btn = document.getElementById('btn3D');
+            if (btn) {
+                btn.classList.add('active');
+                btn.innerText = '3D';
+            }
+
+            var initialPos = (routeCoords && routeCoords.length > 0) ? routeCoords[0] : startCoord;
+            currentCarPos = initialPos;
+
+            // Automatically determine initial road bearing so map starts oriented in moving direction
+            if (routeCoords && routeCoords.length > 1) {
+                currentBearing = getBearing(routeCoords[0], routeCoords[1]);
+            } else {
+                currentBearing = 0;
+            }
+
+            // Apply heading rotation: road turns UP, car turns UP
+            vp.style.setProperty('--map-bearing', (-currentBearing) + 'deg');
+            vp.style.setProperty('--car-heading', currentBearing + 'deg');
+
+            if (carMarker) {
+                carMarker.setLatLng(initialPos);
+                carMarker.setIcon(createVehicleIcon(currentVehicleKey));
+            } else {
+                carMarker = L.marker(initialPos, {
+                    icon: createVehicleIcon(currentVehicleKey),
+                    zIndexOffset: 1000
+                }).addTo(map);
+            }
+
+            map.setView(initialPos, 17, { animate: false });
+            map.invalidateSize();
+            setFollowing(true);
+        }
+
+        function stopDriving() {
+            isNavigating = false;
+            isUserFollowing = true;
+            is3D = false;
+
+            var vp = document.getElementById('map-viewport');
+            vp.classList.remove('nav-mode');
+            vp.classList.remove('mode-3d');
+            vp.style.setProperty('--map-bearing', '0deg');
+            vp.style.setProperty('--car-heading', '0deg');
+
+            var banner = document.getElementById('maneuverBanner');
+            if (banner) banner.classList.remove('active');
+
+            var recenterBtn = document.getElementById('btnRecenter');
+            if (recenterBtn) recenterBtn.classList.remove('visible');
+
+            // Button resets to "2D"
+            var btn = document.getElementById('btn3D');
+            if (btn) {
+                btn.classList.remove('active');
+                btn.innerText = '2D';
+            }
+
+            if (carMarker) {
+                map.removeLayer(carMarker);
+                carMarker = null;
+            }
+
+            if (routeCoords && routeCoords.length > 0 && corePolyline) {
+                map.invalidateSize();
+                fitRouteBounds();
+            }
+        }
+
+        // Live real GPS tracking hook called from C# on every physical location update
+        window.updateUserNavigation = function(lat, lon, heading, speed, maneuverType, streetName, distanceMeters, arrivalFormatted) {
+            currentCarPos = [lat, lon];
+            if (typeof heading === 'number' && !isNaN(heading)) {
+                currentBearing = heading;
+                var vp = document.getElementById('map-viewport');
+                if (vp) {
+                    vp.style.setProperty('--car-heading', currentBearing + 'deg');
+                }
+            }
+
+            var vp = document.getElementById('map-viewport');
+
+            // 1. Move 3D car avatar to exact GPS location
+            if (carMarker) {
+                carMarker.setLatLng([lat, lon]);
+            } else if (isNavigating) {
+                carMarker = L.marker([lat, lon], {
+                    icon: createVehicleIcon(currentVehicleKey),
+                    zIndexOffset: 1000
+                }).addTo(map);
+            }
+
+            // 2. Keep camera locked behind car and rotate map with moving direction
+            if (isNavigating && isUserFollowing) {
+                map.panTo([lat, lon], { animate: false });
+                if (vp) {
+                    vp.style.setProperty('--map-bearing', (-currentBearing) + 'deg');
+                }
+            }
+
+            // 3. Update top driving maneuver banner
+            if (isNavigating) {
+                var banner = document.getElementById('maneuverBanner');
+                if (banner) banner.classList.add('active');
+
+                var iconEl = document.getElementById('maneuverIcon');
+                if (iconEl) {
+                    var icons = {
+                        'straight': '⬆',
+                        'right': '↱',
+                        'left': '↰',
+                        'slight-right': '↗',
+                        'slight-left': '↖',
+                        'uturn': '↶'
+                    };
+                    iconEl.innerText = icons[maneuverType] || '⬆';
+                }
+
+                var streetEl = document.getElementById('maneuverStreet');
+                if (streetEl && streetName) {
+                    streetEl.innerText = streetName;
+                }
+
+                var distEl = document.getElementById('maneuverDistance');
+                if (distEl && typeof distanceMeters === 'number') {
+                    if (distanceMeters >= 1000) {
+                        distEl.innerText = 'In ' + (distanceMeters / 1000).toFixed(1) + ' km';
+                    } else {
+                        distEl.innerText = 'In ' + Math.round(distanceMeters) + ' m';
+                    }
+                }
+            }
+        };
 
         function getBearing(c1, c2) {
             var lat1 = c1[0] * Math.PI / 180;
