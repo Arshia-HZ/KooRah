@@ -15,3 +15,9 @@ obj/
 ## Large Data & Archives
 *.zip
 *.pbf
+
+## Secrets & Config
+secrets.json
+secrets.*.json
+*.secrets.json
+!secrets.example.json

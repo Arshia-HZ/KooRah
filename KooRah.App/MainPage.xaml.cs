@@ -11,8 +11,6 @@ namespace KooRah.App;
 
 public partial class MainPage : ContentPage
 {
-    private const string TomTomApiKey = "YOUR_API_KEY";
-
     private static readonly Color ColorTurquoise = Color.FromArgb("#23A6A0");
     private static readonly Color ColorAmber = Color.FromArgb("#E0A458");
     private static readonly Color ColorMuted = Color.FromArgb("#8B96A3");
@@ -256,7 +254,8 @@ public partial class MainPage : ContentPage
         }
 
         SetStatus("Updating live traffic...", ColorAmber);
-        var traffic = new TomTomTrafficProvider(TomTomApiKey);
+        var apiKey = await AppSecrets.GetTomTomApiKeyAsync();
+        var traffic = new TomTomTrafficProvider(apiKey);
         var candidateEdges = ResolveEdges(graph, initial.NodePath);
 
         foreach (var edge in candidateEdges)

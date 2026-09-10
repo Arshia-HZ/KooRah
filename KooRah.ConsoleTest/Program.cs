@@ -35,7 +35,8 @@ Console.WriteLine($"Found initial route with {candidateRouteEdges.Count} edges."
 
 // 3. Update live traffic for candidate route edges
 Console.WriteLine("\nUpdating live traffic for candidate route edges...");
-var traffic = new TomTomTrafficProvider("7cbcWRLsLafqAjJAfHT9XRYtDjkDbtXs");
+string apiKey = LoadApiKey();
+var traffic = new TomTomTrafficProvider(apiKey);
 using var http = new HttpClient();
 
 // e.g. after finding a candidate path, refresh traffic on its edges before trusting the ETA:
@@ -55,3 +56,26 @@ foreach (var r in all)
     Console.WriteLine($"  {r.AlgorithmName}: {r.ComputeTime.TotalMilliseconds:F1}ms compute");
 
 Console.WriteLine("\nDone!");
+
+static string LoadApiKey()
+{
+    var envKey = Environment.GetEnvironmentVariable("TOMTOM_API_KEY");
+    if (!string.IsNullOrWhiteSpace(envKey)) return envKey.Trim();
+
+    var candidates = new[] { "secrets.json", @"..\secrets.json", @"..\..\..\secrets.json" };
+    foreach (var path in candidates)
+    {
+        if (File.Exists(path))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+                if (doc.RootElement.TryGetProperty("TomTomApiKey", out var key))
+                    return key.GetString() ?? "YOUR_API_KEY";
+            }
+            catch { }
+        }
+    }
+
+    return "YOUR_API_KEY";
+}
