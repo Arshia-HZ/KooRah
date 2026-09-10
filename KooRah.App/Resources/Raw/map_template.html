@@ -18,6 +18,53 @@
             width: 100%;
             height: 100%;
             background-color: #10151B;
+            perspective: 800px;
+        }
+
+        /* 3D Driver's Perspective Mode */
+        #map.mode-3d .leaflet-map-pane {
+            transform: rotateX(48deg) translateY(-8%) scale(1.08);
+            transform-origin: 50% 82%;
+            transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+        #map:not(.mode-3d) .leaflet-map-pane {
+            transform: rotateX(0deg) translateY(0) scale(1);
+            transform-origin: 50% 82%;
+            transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+
+        /* 3D / 2D Floating Toggle Button */
+        .btn-3d-toggle {
+            position: absolute;
+            right: 16px;
+            top: 240px;
+            z-index: 800;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background-color: #1B232C;
+            color: #EDEFF2;
+            border: 1px solid #222C38;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.25s ease;
+        }
+        .btn-3d-toggle:hover {
+            background-color: #242F3B;
+            color: #23A6A0;
+        }
+        .btn-3d-toggle.active {
+            background-color: #23A6A0;
+            color: #10151B;
+            border-color: #23A6A0;
+            box-shadow: 0 4px 16px rgba(35, 166, 160, 0.35);
         }
 
         /* Dark mode overrides for Leaflet UI controls */
@@ -119,26 +166,35 @@
 </head>
 <body>
     <div id="map"></div>
+    <div id="btn3D" class="btn-3d-toggle" onclick="toggle3D()" title="Toggle 3D Driver Perspective">3D</div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         var routeCoords = __ROUTE_COORDS__;   // [[lat, lon], [lat, lon], ...]
         var startCoord = __START_COORD__;     // [lat, lon]
         var endCoord = __END_COORD__;         // [lat, lon]
 
+        // Initialize at zoom 12 for fast initial startup (loads ~4 tiles instead of 25+)
         var map = L.map('map', {
             zoomControl: true,
             attributionControl: true
-        }).setView(startCoord, 14);
+        }).setView(startCoord, 12);
 
         // 1. Navigation Streets layer (Esri World Street Map - warm, balanced, high clarity, NO watermark/key)
         var streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 1,
             attribution: 'Tiles &copy; Esri &mdash; Tehran Road Network'
         }).addTo(map);
 
         // 2. OpenStreetMap Standard layer (Detailed community map - full Persian labels, NO watermark/key)
         var osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 1,
             attribution: '&copy; OpenStreetMap contributors'
         });
 
@@ -148,7 +204,7 @@
             "OpenStreetMap": osmLayer
         }, null, { position: 'topright' }).addTo(map);
 
-        // Custom minimalist night markers
+        // Custom minimalist markers
         var startIcon = L.divIcon({
             className: 'custom-pin-start',
             html: '<div class="map-pin pin-start"><div class="pin-start-inner"></div></div>',
@@ -165,6 +221,27 @@
 
         L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup('__START_TITLE__');
         L.marker(endCoord, { icon: destIcon }).addTo(map).bindPopup('__END_TITLE__');
+
+        // 3D Perspective Toggle Engine
+        var is3D = false;
+        function toggle3D(forceState) {
+            if (typeof forceState === 'boolean') {
+                is3D = forceState;
+            } else {
+                is3D = !is3D;
+            }
+            var mapEl = document.getElementById('map');
+            var btn = document.getElementById('btn3D');
+            if (is3D) {
+                mapEl.classList.add('mode-3d');
+                btn.classList.add('active');
+                btn.innerText = '2D';
+            } else {
+                mapEl.classList.remove('mode-3d');
+                btn.classList.remove('active');
+                btn.innerText = '3D';
+            }
+        }
 
         if (routeCoords && routeCoords.length > 0) {
             // Soft turquoise glow underneath
@@ -187,16 +264,21 @@
 
             // Fit bounds with comfortable padding for top search card and bottom sheet
             map.fitBounds(corePolyline.getBounds(), {
-                paddingTopLeft: [130, 40],
+                paddingTopLeft: [140, 40],
                 paddingBottomRight: [40, 220]
             });
+
+            // Automatically transition to 3D angled driver perspective on active route
+            setTimeout(function() {
+                toggle3D(true);
+            }, 300);
         } else {
             var group = L.featureGroup([
                 L.marker(startCoord),
                 L.marker(endCoord)
             ]);
-            map.fitBounds(group.getBounds().pad(0.4), {
-                paddingTopLeft: [130, 40],
+            map.fitBounds(group.getBounds().pad(0.3), {
+                paddingTopLeft: [140, 40],
                 paddingBottomRight: [40, 220]
             });
         }
