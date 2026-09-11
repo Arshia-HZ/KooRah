@@ -3,15 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:services="clr-namespace:KooRah.App.Services"
              x:Class="KooRah.App.MainPage"
-             BackgroundColor="#10151B"
+             BackgroundColor="#F8FAFC"
              FlowDirection="RightToLeft"
              Title="KooRah">
 
     <!-- Hero Map full-screen with floating interactive cards -->
-    <Grid BackgroundColor="#10151B">
+    <Grid BackgroundColor="#F8FAFC">
 
-        <!-- Full-Bleed Map Hero Layer -->
+        <!-- Full-Bleed Map Hero Layer - FlowDirection="LeftToRight" prevents WinUI 3 from mirroring the WebView2 HWND surface -->
         <WebView x:Name="MapView"
+                 FlowDirection="LeftToRight"
                  HorizontalOptions="Fill"
                  VerticalOptions="Fill"
                  Navigating="OnMapViewNavigating" />
@@ -22,17 +23,17 @@
                              Margin="16, 20, 16, 0"
                              Spacing="6">
 
-            <!-- Search Panel Border -->
+            <!-- Search Panel Border - Modern Crisp Light Theme -->
             <Border StrokeShape="RoundRectangle 20"
                     StrokeThickness="1"
-                    Stroke="#222C38"
-                    BackgroundColor="#1B232C"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF"
                     Padding="14, 12">
                 <Border.Shadow>
-                    <Shadow Brush="#080C10"
-                            Offset="0, 8"
-                            Radius="20"
-                            Opacity="0.65" />
+                    <Shadow Brush="#64748B"
+                            Offset="0, 6"
+                            Radius="18"
+                            Opacity="0.12" />
                 </Border.Shadow>
 
                 <VerticalStackLayout Spacing="10">
@@ -43,13 +44,13 @@
                             <Ellipse x:Name="StatusDot"
                                      WidthRequest="8"
                                      HeightRequest="8"
-                                     Fill="#8B96A3"
+                                     Fill="#0D9488"
                                      VerticalOptions="Center" />
                             <Label x:Name="StatusLabel"
-                                   Text="Loading road network..."
+                                   Text="آماده"
                                    FontFamily="Manrope"
                                    FontSize="12"
-                                   TextColor="#8B96A3"
+                                   TextColor="#64748B"
                                    VerticalOptions="Center" />
                         </HorizontalStackLayout>
 
@@ -60,9 +61,9 @@
                                 FontFamily="Manrope"
                                 FontSize="11"
                                 FontAttributes="Bold"
-                                TextColor="#23A6A0"
-                                BackgroundColor="#151D25"
-                                BorderColor="#26313E"
+                                TextColor="#0F766E"
+                                BackgroundColor="#F1F5F9"
+                                BorderColor="#E2E8F0"
                                 BorderWidth="1"
                                 CornerRadius="12"
                                 HeightRequest="30"
@@ -79,12 +80,12 @@
                                 <!-- Origin Dot (Teal/Green) -->
                                 <Ellipse WidthRequest="9"
                                          HeightRequest="9"
-                                         Fill="#23A6A0"
+                                         Fill="#0D9488"
                                          HorizontalOptions="Center" />
                                 <!-- Dotted Connection Track -->
                                 <BoxView WidthRequest="2"
                                          HeightRequest="28"
-                                         Color="#334253"
+                                         Color="#CBD5E1"
                                          HorizontalOptions="Center" />
                                 <!-- Destination Pin (Coral/Red) -->
                                 <Ellipse WidthRequest="9"
@@ -99,15 +100,15 @@
                                 Grid.Row="0"
                                 StrokeShape="RoundRectangle 12"
                                 StrokeThickness="1"
-                                Stroke="#26313E"
-                                BackgroundColor="#10151B"
+                                Stroke="#E2E8F0"
+                                BackgroundColor="#F8FAFC"
                                 Padding="10, 0">
                             <Grid ColumnDefinitions="*, Auto">
                                 <Entry x:Name="OriginEntry"
                                        Grid.Column="0"
                                        Placeholder="مبدا (جستجوی آدرس یا موقعیت فعلی)"
-                                       PlaceholderColor="#5F6D7E"
-                                       TextColor="#EDEFF2"
+                                       PlaceholderColor="#94A3B8"
+                                       TextColor="#0F172A"
                                        FontFamily="Manrope"
                                        FontSize="13"
                                        HeightRequest="38"
@@ -117,7 +118,7 @@
                                         Grid.Column="1"
                                         Text="✕"
                                         FontSize="12"
-                                        TextColor="#8B96A3"
+                                        TextColor="#94A3B8"
                                         BackgroundColor="Transparent"
                                         BorderWidth="0"
                                         WidthRequest="28"
@@ -137,9 +138,9 @@
                                 FontFamily="Manrope"
                                 FontSize="19"
                                 FontAttributes="Bold"
-                                TextColor="#23A6A0"
-                                BackgroundColor="#10151B"
-                                BorderColor="#26313E"
+                                TextColor="#0D9488"
+                                BackgroundColor="#F0FDFA"
+                                BorderColor="#CCFBF1"
                                 BorderWidth="1"
                                 CornerRadius="12"
                                 WidthRequest="40"
@@ -152,25 +153,26 @@
                                 Grid.Row="1"
                                 StrokeShape="RoundRectangle 12"
                                 StrokeThickness="1"
-                                Stroke="#26313E"
-                                BackgroundColor="#10151B"
+                                Stroke="#E2E8F0"
+                                BackgroundColor="#F8FAFC"
                                 Padding="10, 0">
                             <Grid ColumnDefinitions="*, Auto">
                                 <Entry x:Name="DestinationEntry"
                                        Grid.Column="0"
                                        Placeholder="مقصد (جستجوی آدرس یا نام مکان)"
-                                       PlaceholderColor="#5F6D7E"
-                                       TextColor="#EDEFF2"
+                                       PlaceholderColor="#94A3B8"
+                                       TextColor="#0F172A"
                                        FontFamily="Manrope"
                                        FontSize="13"
                                        HeightRequest="38"
                                        TextChanged="OnDestinationTextChanged"
-                                       Focused="OnDestinationFocused" />
+                                       Focused="OnDestinationFocused"
+                                       Completed="OnDestinationCompleted" />
                                 <Button x:Name="ClearDestinationButton"
                                         Grid.Column="1"
                                         Text="✕"
                                         FontSize="12"
-                                        TextColor="#8B96A3"
+                                        TextColor="#94A3B8"
                                         BackgroundColor="Transparent"
                                         BorderWidth="0"
                                         WidthRequest="28"
@@ -190,9 +192,9 @@
                                 FontFamily="Manrope"
                                 FontSize="17"
                                 FontAttributes="Bold"
-                                TextColor="#EDEFF2"
-                                BackgroundColor="#10151B"
-                                BorderColor="#26313E"
+                                TextColor="#0D9488"
+                                BackgroundColor="#F1F5F9"
+                                BorderColor="#E2E8F0"
                                 BorderWidth="1"
                                 CornerRadius="12"
                                 WidthRequest="40"
@@ -221,15 +223,15 @@
                     IsVisible="False"
                     StrokeShape="RoundRectangle 16"
                     StrokeThickness="1"
-                    Stroke="#222C38"
-                    BackgroundColor="#1B232C"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF"
                     Padding="6, 6"
                     MaximumHeightRequest="240">
                 <Border.Shadow>
-                    <Shadow Brush="#05080C"
+                    <Shadow Brush="#64748B"
                             Offset="0, 8"
                             Radius="20"
-                            Opacity="0.75" />
+                            Opacity="0.15" />
                 </Border.Shadow>
 
                 <CollectionView x:Name="SuggestionsCollection"
@@ -247,7 +249,7 @@
                                         <VisualState Name="Normal" />
                                         <VisualState Name="Selected">
                                             <VisualState.Setters>
-                                                <Setter Property="BackgroundColor" Value="#242F3B" />
+                                                <Setter Property="BackgroundColor" Value="#F1F5F9" />
                                             </VisualState.Setters>
                                         </VisualState>
                                     </VisualStateGroup>
@@ -259,11 +261,11 @@
                                                FontFamily="Manrope"
                                                FontSize="13"
                                                FontAttributes="Bold"
-                                               TextColor="#EDEFF2" />
+                                               TextColor="#0F172A" />
                                         <Label Text="{Binding DisplayAddress}"
                                                FontFamily="Manrope"
                                                FontSize="11"
-                                               TextColor="#8B96A3"
+                                               TextColor="#64748B"
                                                LineBreakMode="TailTruncation" />
                                     </VerticalStackLayout>
 
@@ -293,9 +295,9 @@
                 FontFamily="Manrope"
                 FontSize="14"
                 FontAttributes="Bold"
-                TextColor="#23A6A0"
-                BackgroundColor="#1B232C"
-                BorderColor="#23A6A0"
+                TextColor="#0D9488"
+                BackgroundColor="#FFFFFF"
+                BorderColor="#0D9488"
                 BorderWidth="1.5"
                 CornerRadius="24"
                 HeightRequest="44"
@@ -306,32 +308,87 @@
                 IsVisible="False"
                 Clicked="OnRecenterClicked">
             <Button.Shadow>
-                <Shadow Brush="#05080C"
+                <Shadow Brush="#0D9488"
                         Offset="0, 6"
                         Radius="16"
-                        Opacity="0.75" />
+                        Opacity="0.18" />
+            </Button.Shadow>
+        </Button>
+
+        <!-- Floating Expand / Find Route Pill Button (Shown when Bottom Route Card is minimized or hidden) -->
+        <Button x:Name="ExpandRouteCardButton"
+                Text="🚗 مسیریابی"
+                FontFamily="Manrope"
+                FontSize="13"
+                FontAttributes="Bold"
+                TextColor="#0F766E"
+                BackgroundColor="#FFFFFF"
+                BorderColor="#0D9488"
+                BorderWidth="1.5"
+                CornerRadius="22"
+                HeightRequest="44"
+                Padding="20, 0"
+                HorizontalOptions="Center"
+                VerticalOptions="End"
+                Margin="0, 0, 0, 24"
+                IsVisible="False"
+                Clicked="OnExpandRouteCardClicked">
+            <Button.Shadow>
+                <Shadow Brush="#0D9488"
+                        Offset="0, 4"
+                        Radius="16"
+                        Opacity="0.22" />
             </Button.Shadow>
         </Button>
 
         <!-- BOTTOM: Floating Route & ETA Sheet Card -->
-        <Border HorizontalOptions="Fill"
+        <Border x:Name="BottomRouteCard"
+                HorizontalOptions="Fill"
                 VerticalOptions="End"
                 Margin="16, 0, 16, 24"
                 Padding="18, 16"
                 StrokeShape="RoundRectangle 24"
                 StrokeThickness="1"
-                Stroke="#222C38"
-                BackgroundColor="#1B232C">
+                Stroke="#E2E8F0"
+                BackgroundColor="#FFFFFF"
+                IsVisible="False">
             <Border.Shadow>
-                <Shadow Brush="#080C10"
+                <Shadow Brush="#64748B"
                         Offset="0, 8"
                         Radius="24"
-                        Opacity="0.65" />
+                        Opacity="0.15" />
             </Border.Shadow>
 
             <VerticalStackLayout Spacing="14">
                 <!-- Overview Panel (Idle & Route Calculated) -->
                 <VerticalStackLayout x:Name="OverviewPanel" Spacing="12">
+                    <!-- Top Bar with Status / Title and Minimize Button -->
+                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                        <Label x:Name="BottomCardTitleLabel"
+                               Text="اطلاعات مسیر"
+                               FontFamily="Manrope"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="#94A3B8"
+                               VerticalOptions="Center" />
+
+                        <Button x:Name="MinimizeRouteCardButton"
+                                Grid.Column="1"
+                                Text="⌵"
+                                ToolTipProperties.Text="کوچک کردن کارت"
+                                FontFamily="Manrope"
+                                FontSize="17"
+                                FontAttributes="Bold"
+                                TextColor="#64748B"
+                                BackgroundColor="#F1F5F9"
+                                BorderWidth="0"
+                                CornerRadius="12"
+                                WidthRequest="32"
+                                HeightRequest="28"
+                                Padding="0"
+                                Clicked="OnMinimizeRouteCardClicked" />
+                    </Grid>
+
                     <!-- Metrics Row: Big ETA on left, Distance on right -->
                     <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
                         <VerticalStackLayout Grid.Column="0" Spacing="2">
@@ -340,12 +397,12 @@
                                    FontFamily="SpaceGrotesk"
                                    FontSize="36"
                                    FontAttributes="Bold"
-                                   TextColor="#EDEFF2" />
+                                   TextColor="#0F172A" />
                             <Label x:Name="AlgorithmDetailsLabel"
                                    Text="مبدا و مقصد را انتخاب کنید"
                                    FontFamily="Manrope"
                                    FontSize="12"
-                                   TextColor="#8B96A3" />
+                                   TextColor="#64748B" />
                         </VerticalStackLayout>
 
                         <Label x:Name="DistanceLabel"
@@ -354,7 +411,7 @@
                                FontFamily="Manrope"
                                FontSize="19"
                                FontAttributes="Bold"
-                               TextColor="#EDEFF2"
+                               TextColor="#0D9488"
                                VerticalOptions="Start"
                                Margin="0, 6, 0, 0" />
                     </Grid>
@@ -362,25 +419,26 @@
                     <!-- Route Quality Badges (Live Traffic & Fast Route tags) -->
                     <HorizontalStackLayout x:Name="RouteBadgesLayout" Spacing="8" IsVisible="False">
                         <Border StrokeShape="RoundRectangle 8"
-                                BackgroundColor="#15322F"
-                                Stroke="#1A4A45"
+                                BackgroundColor="#F0FDFA"
+                                Stroke="#CCFBF1"
                                 StrokeThickness="1"
                                 Padding="8, 3">
                             <Label Text="⚡ سریع‌ترین مسیر"
                                    FontFamily="Manrope"
                                    FontSize="11"
                                    FontAttributes="Bold"
-                                   TextColor="#38D9CE" />
+                                   TextColor="#0F766E" />
                         </Border>
                         <Border StrokeShape="RoundRectangle 8"
-                                BackgroundColor="#1B2836"
-                                Stroke="#263A4D"
+                                BackgroundColor="#ECFDF5"
+                                Stroke="#D1FAE5"
                                 StrokeThickness="1"
                                 Padding="8, 3">
-                            <Label Text="🟢 ترافیک زنده TomTom"
+                            <Label x:Name="LiveTrafficBadgeLabel"
+                                   Text="🟢 ترافیک زنده TomTom"
                                    FontFamily="Manrope"
                                    FontSize="11"
-                                   TextColor="#8B96A3" />
+                                   TextColor="#059669" />
                         </Border>
                     </HorizontalStackLayout>
 
@@ -389,7 +447,7 @@
                            Text=""
                            FontFamily="Manrope"
                            FontSize="12"
-                           TextColor="#E0A458"
+                           TextColor="#D97706"
                            IsVisible="False" />
 
                     <!-- Dual Action Buttons Row: Find Route + Save Destination -->
@@ -400,8 +458,8 @@
                                 FontFamily="Manrope"
                                 FontSize="15"
                                 FontAttributes="Bold"
-                                TextColor="#10151B"
-                                BackgroundColor="#23A6A0"
+                                TextColor="#FFFFFF"
+                                BackgroundColor="#0D9488"
                                 CornerRadius="16"
                                 HeightRequest="50"
                                 Clicked="OnFindRouteClicked"
@@ -415,9 +473,9 @@
                                 FontFamily="Manrope"
                                 FontSize="13"
                                 FontAttributes="Bold"
-                                TextColor="#EDEFF2"
-                                BackgroundColor="#222C38"
-                                BorderColor="#334253"
+                                TextColor="#0F766E"
+                                BackgroundColor="#F1F5F9"
+                                BorderColor="#E2E8F0"
                                 BorderWidth="1"
                                 CornerRadius="16"
                                 HeightRequest="50"
@@ -429,8 +487,8 @@
 
                 <!-- Active Navigation Panel (Google Maps Style) -->
                 <Grid x:Name="ActiveNavPanel"
-                      ColumnDefinitions="Auto, *, Auto"
-                      ColumnSpacing="14"
+                      ColumnDefinitions="Auto, *, Auto, Auto"
+                      ColumnSpacing="10"
                       VerticalOptions="Center"
                       IsVisible="False">
                     <!-- Exit Navigation Circular Button -->
@@ -440,9 +498,9 @@
                             FontFamily="Manrope"
                             FontSize="18"
                             FontAttributes="Bold"
-                            TextColor="#EDEFF2"
-                            BackgroundColor="#26313E"
-                            BorderColor="#334253"
+                            TextColor="#DC2626"
+                            BackgroundColor="#FEE2E2"
+                            BorderColor="#FECACA"
                             BorderWidth="1"
                             CornerRadius="24"
                             WidthRequest="48"
@@ -457,26 +515,44 @@
                                FontFamily="SpaceGrotesk"
                                FontSize="32"
                                FontAttributes="Bold"
-                               TextColor="#23A6A0" />
+                               TextColor="#0D9488" />
                         <Label x:Name="NavDetailsLabel"
                                Text="-- کیلومتر • --:--"
                                FontFamily="Manrope"
                                FontSize="13"
-                               TextColor="#8B96A3" />
+                               TextColor="#64748B" />
                     </VerticalStackLayout>
+
+                    <!-- Minimize button in Nav Mode -->
+                    <Button x:Name="MinimizeNavCardButton"
+                            Grid.Column="2"
+                            Text="⌵"
+                            ToolTipProperties.Text="کوچک کردن برای دید بهتر نقشه"
+                            FontFamily="Manrope"
+                            FontSize="18"
+                            FontAttributes="Bold"
+                            TextColor="#64748B"
+                            BackgroundColor="#F1F5F9"
+                            BorderColor="#E2E8F0"
+                            BorderWidth="1"
+                            CornerRadius="24"
+                            WidthRequest="44"
+                            HeightRequest="44"
+                            Padding="0"
+                            Clicked="OnMinimizeRouteCardClicked" />
 
                     <!-- Vehicle Switcher Button -->
                     <Button x:Name="VehicleSwitchButton"
-                            Grid.Column="2"
+                            Grid.Column="3"
                             Text="🚗"
                             ToolTipProperties.Text="Switch 3D Car Model"
-                            FontSize="20"
-                            BackgroundColor="#26313E"
-                            BorderColor="#334253"
+                            FontSize="18"
+                            BackgroundColor="#F1F5F9"
+                            BorderColor="#E2E8F0"
                             BorderWidth="1"
                             CornerRadius="24"
-                            WidthRequest="48"
-                            HeightRequest="48"
+                            WidthRequest="44"
+                            HeightRequest="44"
                             Padding="0"
                             Clicked="OnVehicleSwitchClicked" />
                 </Grid>
@@ -486,7 +562,7 @@
         <!-- POPUP MODAL: Saved Places Management Sheet -->
         <Grid x:Name="SavedPlacesModal"
               IsVisible="False"
-              BackgroundColor="#B305080C"
+              BackgroundColor="#660F172A"
               HorizontalOptions="Fill"
               VerticalOptions="Fill">
 
@@ -502,8 +578,8 @@
             <!-- Centered Modal Content Card -->
             <Border StrokeShape="RoundRectangle 24"
                     StrokeThickness="1"
-                    Stroke="#2A3746"
-                    BackgroundColor="#171F27"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF"
                     Padding="20"
                     Margin="18, 40, 18, 40"
                     HorizontalOptions="Center"
@@ -511,10 +587,10 @@
                     MaximumWidthRequest="480"
                     MaximumHeightRequest="680">
                 <Border.Shadow>
-                    <Shadow Brush="#000000"
+                    <Shadow Brush="#0F172A"
                             Offset="0, 10"
                             Radius="28"
-                            Opacity="0.8" />
+                            Opacity="0.18" />
                 </Border.Shadow>
 
                 <VerticalStackLayout Spacing="14">
@@ -526,7 +602,7 @@
                                    FontFamily="Manrope"
                                    FontSize="16"
                                    FontAttributes="Bold"
-                                   TextColor="#EDEFF2"
+                                   TextColor="#0F172A"
                                    VerticalOptions="Center" />
                         </HorizontalStackLayout>
 
@@ -536,9 +612,9 @@
                                 FontFamily="Manrope"
                                 FontSize="14"
                                 FontAttributes="Bold"
-                                TextColor="#8B96A3"
-                                BackgroundColor="#222C38"
-                                BorderColor="#2E3B4B"
+                                TextColor="#64748B"
+                                BackgroundColor="#F1F5F9"
+                                BorderColor="#E2E8F0"
                                 BorderWidth="1"
                                 CornerRadius="16"
                                 WidthRequest="32"
@@ -548,19 +624,19 @@
                     </Grid>
 
                     <!-- Tab Separator -->
-                    <BoxView HeightRequest="1" Color="#222C38" HorizontalOptions="Fill" />
+                    <BoxView HeightRequest="1" Color="#E2E8F0" HorizontalOptions="Fill" />
 
                     <!-- Saved Places List -->
                     <Label Text="مکان‌های ثبت‌شده:"
                            FontFamily="Manrope"
                            FontSize="12"
                            FontAttributes="Bold"
-                           TextColor="#8B96A3" />
+                           TextColor="#64748B" />
 
                     <Border StrokeShape="RoundRectangle 14"
                             StrokeThickness="1"
-                            Stroke="#222C38"
-                            BackgroundColor="#11171E"
+                            Stroke="#E2E8F0"
+                            BackgroundColor="#F8FAFC"
                             Padding="4, 4"
                             HeightRequest="190">
                         <CollectionView x:Name="SavedPlacesCollectionView"
@@ -571,7 +647,7 @@
                                     <Label Text="هنوز مکانی ذخیره نشده است"
                                            FontFamily="Manrope"
                                            FontSize="12"
-                                           TextColor="#5F6D7E"
+                                           TextColor="#94A3B8"
                                            HorizontalOptions="Center" />
                                 </VerticalStackLayout>
                             </CollectionView.EmptyView>
@@ -580,8 +656,8 @@
                                 <DataTemplate x:DataType="services:SavedPlace">
                                     <Border StrokeShape="RoundRectangle 10"
                                             StrokeThickness="1"
-                                            Stroke="#1E2833"
-                                            BackgroundColor="#171F27"
+                                            Stroke="#E2E8F0"
+                                            BackgroundColor="#FFFFFF"
                                             Padding="10, 8"
                                             Margin="4, 3">
                                         <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="8" VerticalOptions="Center">
@@ -597,11 +673,11 @@
                                                        FontFamily="Manrope"
                                                        FontSize="13"
                                                        FontAttributes="Bold"
-                                                       TextColor="#EDEFF2" />
+                                                       TextColor="#0F172A" />
                                                 <Label Text="{Binding DisplaySubtitle}"
                                                        FontFamily="Manrope"
                                                        FontSize="11"
-                                                       TextColor="#8B96A3"
+                                                       TextColor="#64748B"
                                                        LineBreakMode="TailTruncation" />
                                             </VerticalStackLayout>
 
@@ -611,8 +687,8 @@
                                                     FontFamily="Manrope"
                                                     FontSize="11"
                                                     FontAttributes="Bold"
-                                                    TextColor="#10151B"
-                                                    BackgroundColor="#23A6A0"
+                                                    TextColor="#FFFFFF"
+                                                    BackgroundColor="#0D9488"
                                                     CornerRadius="10"
                                                     HeightRequest="32"
                                                     Padding="10, 0"
@@ -623,7 +699,7 @@
                                             <Button Grid.Column="3"
                                                     Text="🗑"
                                                     FontSize="13"
-                                                    TextColor="#E06C75"
+                                                    TextColor="#EF4444"
                                                     BackgroundColor="Transparent"
                                                     BorderWidth="0"
                                                     WidthRequest="32"
@@ -644,18 +720,18 @@
                                FontFamily="Manrope"
                                FontSize="12"
                                FontAttributes="Bold"
-                               TextColor="#23A6A0" />
+                               TextColor="#0D9488" />
 
                         <!-- Custom Name Entry -->
                         <Border StrokeShape="RoundRectangle 12"
                                 StrokeThickness="1"
-                                Stroke="#26313E"
-                                BackgroundColor="#10151B"
+                                Stroke="#E2E8F0"
+                                BackgroundColor="#F8FAFC"
                                 Padding="10, 2">
                             <Entry x:Name="NewPlaceLabelEntry"
                                    Placeholder="نام مکان (مثلاً خانه، باشگاه، شرکت، کافه)"
-                                   PlaceholderColor="#5F6D7E"
-                                   TextColor="#EDEFF2"
+                                   PlaceholderColor="#94A3B8"
+                                   TextColor="#0F172A"
                                    FontFamily="Manrope"
                                    FontSize="13"
                                    HeightRequest="38" />
@@ -666,16 +742,16 @@
                             <Label Text="انتخاب آیکون:"
                                    FontFamily="Manrope"
                                    FontSize="11"
-                                   TextColor="#8B96A3" />
+                                   TextColor="#64748B" />
                             <HorizontalStackLayout x:Name="IconPickerLayout" Spacing="6" HorizontalOptions="Center">
-                                <Button Text="🏠" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#222C38" BorderColor="#23A6A0" BorderWidth="1.5" Clicked="OnIconOptionClicked" />
-                                <Button Text="💼" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
-                                <Button Text="🏋️" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
-                                <Button Text="☕" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
-                                <Button Text="🎓" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
-                                <Button Text="🛒" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
-                                <Button Text="⭐" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
-                                <Button Text="📍" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#171F27" BorderColor="#2E3B4B" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="🏠" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F0FDFA" BorderColor="#0D9488" BorderWidth="1.5" Clicked="OnIconOptionClicked" />
+                                <Button Text="💼" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="🏋️" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="☕" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="🎓" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="🛒" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="⭐" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
+                                <Button Text="📍" FontSize="16" WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10" BackgroundColor="#F8FAFC" BorderColor="#E2E8F0" BorderWidth="1" Clicked="OnIconOptionClicked" />
                             </HorizontalStackLayout>
                         </VerticalStackLayout>
 
@@ -687,9 +763,9 @@
                                     FontFamily="Manrope"
                                     FontSize="11"
                                     FontAttributes="Bold"
-                                    TextColor="#EDEFF2"
-                                    BackgroundColor="#222C38"
-                                    BorderColor="#23A6A0"
+                                    TextColor="#0F766E"
+                                    BackgroundColor="#F0FDFA"
+                                    BorderColor="#0D9488"
                                     BorderWidth="1.5"
                                     CornerRadius="12"
                                     HeightRequest="36"
@@ -700,9 +776,9 @@
                                     Text="موقعیت فعلی من"
                                     FontFamily="Manrope"
                                     FontSize="11"
-                                    TextColor="#8B96A3"
-                                    BackgroundColor="#171F27"
-                                    BorderColor="#2E3B4B"
+                                    TextColor="#64748B"
+                                    BackgroundColor="#F8FAFC"
+                                    BorderColor="#E2E8F0"
                                     BorderWidth="1"
                                     CornerRadius="12"
                                     HeightRequest="36"
@@ -715,8 +791,8 @@
                                 FontFamily="Manrope"
                                 FontSize="14"
                                 FontAttributes="Bold"
-                                TextColor="#10151B"
-                                BackgroundColor="#23A6A0"
+                                TextColor="#FFFFFF"
+                                BackgroundColor="#0D9488"
                                 CornerRadius="14"
                                 HeightRequest="44"
                                 Margin="0, 4, 0, 0"

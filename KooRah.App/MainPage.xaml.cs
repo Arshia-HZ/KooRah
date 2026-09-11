@@ -18,9 +18,9 @@ public partial class MainPage : ContentPage
         Navigating      // 3D driver follow navigation active
     }
 
-    private static readonly Color ColorTurquoise = Color.FromArgb("#23A6A0");
-    private static readonly Color ColorAmber = Color.FromArgb("#E0A458");
-    private static readonly Color ColorMuted = Color.FromArgb("#8B96A3");
+    private static readonly Color ColorTurquoise = Color.FromArgb("#0D9488");
+    private static readonly Color ColorAmber = Color.FromArgb("#D97706");
+    private static readonly Color ColorMuted = Color.FromArgb("#64748B");
 
     private static readonly (double Lat, double Lon) FallbackAzadi = (35.6997, 51.3375);
     private const string FallbackOriginTitle = "میدان آزادی";
@@ -72,6 +72,8 @@ public partial class MainPage : ContentPage
         FindRouteButton.IsEnabled = false;
         FindRouteButton.Text = "مسیریابی";
         AlgorithmDetailsLabel.Text = "مقصد را انتخاب کنید";
+
+        SetBottomCardVisible(false);
 
         _savedPlaces.SavedPlacesChanged += async (s, e) =>
         {
@@ -271,11 +273,11 @@ public partial class MainPage : ContentPage
         _ = ShowEmptyMapAsync();
     }
 
-    private void OnClearDestinationClicked(object? sender, EventArgs e)
+    private async void OnClearDestinationClicked(object? sender, EventArgs e)
     {
         if (_navState == NavState.Navigating)
         {
-            _ = StopNavigationAsync();
+            await StopNavigationAsync();
         }
         _isProgrammaticTextChange = true;
         DestinationEntry.Text = string.Empty;
@@ -285,8 +287,23 @@ public partial class MainPage : ContentPage
 
         _endCoord = null;
         _endTitle = string.Empty;
+        SetBottomCardVisible(false);
+        try
+        {
+            await MapView.EvaluateJavaScriptAsync("clearDestinationMarker();");
+        }
+        catch { }
         ResetToIdleState();
-        _ = ShowEmptyMapAsync();
+        await ShowEmptyMapAsync();
+    }
+
+    private void OnDestinationCompleted(object? sender, EventArgs e)
+    {
+        if (_endCoord.HasValue && _graph != null)
+        {
+            SetBottomCardVisible(true);
+            OnFindRouteClicked(sender, e);
+        }
     }
 
     private async void OnSwapEndpointsClicked(object? sender, EventArgs e)
@@ -355,6 +372,7 @@ public partial class MainPage : ContentPage
         ActiveNavPanel.IsVisible = false;
         TopSearchCard.IsVisible = true;
         RecenterButton.IsVisible = false;
+        SetBottomCardVisible(false);
     }
 
     private void TriggerSearchDebounced(string query)
@@ -452,9 +470,9 @@ public partial class MainPage : ContentPage
             FontFamily = "Manrope",
             FontSize = 11,
             FontAttributes = FontAttributes.Bold,
-            TextColor = ColorTurquoise,
-            BackgroundColor = Color.FromArgb("#151D25"),
-            BorderColor = Color.FromArgb("#26313E"),
+            TextColor = Color.FromArgb("#0F766E"),
+            BackgroundColor = Color.FromArgb("#F0FDFA"),
+            BorderColor = Color.FromArgb("#99F6E4"),
             BorderWidth = 1,
             CornerRadius = 12,
             HeightRequest = 32,
@@ -473,9 +491,9 @@ public partial class MainPage : ContentPage
                 FontFamily = "Manrope",
                 FontSize = 11,
                 FontAttributes = FontAttributes.Bold,
-                TextColor = Color.FromArgb("#EDEFF2"),
-                BackgroundColor = Color.FromArgb("#151D25"),
-                BorderColor = Color.FromArgb("#26313E"),
+                TextColor = Color.FromArgb("#1E293B"),
+                BackgroundColor = Color.FromArgb("#F8FAFC"),
+                BorderColor = Color.FromArgb("#E2E8F0"),
                 BorderWidth = 1,
                 CornerRadius = 12,
                 HeightRequest = 32,
@@ -540,13 +558,13 @@ public partial class MainPage : ContentPage
                     {
                         b.BorderColor = ColorTurquoise;
                         b.BorderWidth = 1.5;
-                        b.BackgroundColor = Color.FromArgb("#222C38");
+                        b.BackgroundColor = Color.FromArgb("#F0FDFA");
                     }
                     else
                     {
-                        b.BorderColor = Color.FromArgb("#2E3B4B");
+                        b.BorderColor = Color.FromArgb("#E2E8F0");
                         b.BorderWidth = 1;
-                        b.BackgroundColor = Color.FromArgb("#171F27");
+                        b.BackgroundColor = Color.FromArgb("#F8FAFC");
                     }
                 }
             }
@@ -558,13 +576,13 @@ public partial class MainPage : ContentPage
         _saveFromGps = false;
         SourceDestinationButton.BorderColor = ColorTurquoise;
         SourceDestinationButton.BorderWidth = 1.5;
-        SourceDestinationButton.TextColor = Color.FromArgb("#EDEFF2");
-        SourceDestinationButton.BackgroundColor = Color.FromArgb("#222C38");
+        SourceDestinationButton.TextColor = Color.FromArgb("#0F766E");
+        SourceDestinationButton.BackgroundColor = Color.FromArgb("#F0FDFA");
 
-        SourceGpsButton.BorderColor = Color.FromArgb("#2E3B4B");
+        SourceGpsButton.BorderColor = Color.FromArgb("#E2E8F0");
         SourceGpsButton.BorderWidth = 1;
         SourceGpsButton.TextColor = ColorMuted;
-        SourceGpsButton.BackgroundColor = Color.FromArgb("#171F27");
+        SourceGpsButton.BackgroundColor = Color.FromArgb("#F8FAFC");
     }
 
     private void OnSourceGpsClicked(object? sender, EventArgs e)
@@ -572,13 +590,13 @@ public partial class MainPage : ContentPage
         _saveFromGps = true;
         SourceGpsButton.BorderColor = ColorTurquoise;
         SourceGpsButton.BorderWidth = 1.5;
-        SourceGpsButton.TextColor = Color.FromArgb("#EDEFF2");
-        SourceGpsButton.BackgroundColor = Color.FromArgb("#222C38");
+        SourceGpsButton.TextColor = Color.FromArgb("#0F766E");
+        SourceGpsButton.BackgroundColor = Color.FromArgb("#F0FDFA");
 
-        SourceDestinationButton.BorderColor = Color.FromArgb("#2E3B4B");
+        SourceDestinationButton.BorderColor = Color.FromArgb("#E2E8F0");
         SourceDestinationButton.BorderWidth = 1;
         SourceDestinationButton.TextColor = ColorMuted;
-        SourceDestinationButton.BackgroundColor = Color.FromArgb("#171F27");
+        SourceDestinationButton.BackgroundColor = Color.FromArgb("#F8FAFC");
     }
 
     private async void OnConfirmSaveNewPlaceClicked(object? sender, EventArgs e)
@@ -696,6 +714,7 @@ public partial class MainPage : ContentPage
         FindRouteButton.IsEnabled = false;
         WarningLabel.IsVisible = false;
         SetStatus("جستجوی کاندیدای مسیر...", ColorMuted);
+        SetBottomCardVisible(true);
 
         var graph = _graph;
         var start = graph.FindNearestNode(_startCoord.Lat, _startCoord.Lon);
@@ -714,18 +733,12 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        SetStatus("دریافت ترافیک زنده TomTom...", ColorAmber);
-        var apiKey = await AppSecrets.GetTomTomApiKeyAsync();
-        var traffic = new TomTomTrafficProvider(apiKey);
-        var candidateEdges = ResolveEdges(graph, initial.NodePath);
+        SetStatus("محاسبه سریع‌ترین مسیر با ترافیک هوشمند تهران...", ColorMuted);
 
-        foreach (var edge in candidateEdges)
-        {
-            try { await traffic.UpdateEdgeSpeedAsync(edge, _http); }
-            catch { /* keep free-flow speed on edge if call fails */ }
-        }
+        // Apply dynamic time-of-day traffic model across Tehran road network (100% free, local, < 3ms)
+        var timeTraffic = new TehranTimeTrafficProvider();
+        timeTraffic.ApplyTrafficToGraph(graph);
 
-        SetStatus("محاسبه سریع‌ترین مسیر با الگوریتم‌های هوشمند...", ColorMuted);
         var (best, all) = await Task.Run(() => comparer.FindBestRoute(graph, start.Id, end.Id));
 
         if (best is null)
@@ -740,15 +753,17 @@ public partial class MainPage : ContentPage
         _lastNodePath = best.NodePath;
         _lastBestRoute = best;
 
-        // Display results according to night-driving design specs:
-        var etaMinutes = Math.Max(1, (int)Math.Round(best.TotalTravelTimeSeconds / 60.0));
-        EtaLabel.Text = $"{etaMinutes} دقیقه";
+        // Display results according to traffic-aware specs:
+        var etaMins = Math.Max(1, (int)Math.Round(best.TotalTravelTimeSeconds / 60.0));
+        EtaLabel.Text = $"{etaMins} دقیقه";
         DistanceLabel.Text = $"{best.TotalDistanceMeters / 1000.0:F1} کیلومتر";
 
-        AlgorithmDetailsLabel.Text = $"{best.AlgorithmName} · {best.ComputeTime.TotalMilliseconds:F1} میلی‌ثانیه";
+        var trafficStatus = TehranTimeTrafficProvider.GetTrafficStatusDescription();
+        AlgorithmDetailsLabel.Text = $"{best.AlgorithmName} • {trafficStatus} ({best.ComputeTime.TotalMilliseconds:F1} میلی‌ثانیه)";
         SetStatus($"آماده — {_graph.Nodes.Count:N0} تقاطع", ColorTurquoise);
 
         RouteBadgesLayout.IsVisible = true;
+        LiveTrafficBadgeLabel.Text = "🟢 ترافیک هوشمند تهران";
         await DrawRouteAsync(graph, best.NodePath);
 
         // Transition to RouteCalculated state
@@ -758,6 +773,7 @@ public partial class MainPage : ContentPage
         FindRouteButton.TextColor = Color.FromArgb("#10151B");
         FindRouteButton.IsEnabled = true;
         SaveDestinationButton.IsEnabled = true;
+        SetBottomCardVisible(true);
     }
 
     private async Task StartNavigationAsync()
@@ -769,6 +785,7 @@ public partial class MainPage : ContentPage
         OverviewPanel.IsVisible = false;
         ActiveNavPanel.IsVisible = true;
         RecenterButton.IsVisible = false;
+        SetBottomCardVisible(true);
 
         if (_lastBestRoute != null)
         {
@@ -803,6 +820,7 @@ public partial class MainPage : ContentPage
         ActiveNavPanel.IsVisible = false;
         OverviewPanel.IsVisible = true;
         RecenterButton.IsVisible = false;
+        SetBottomCardVisible(true);
 
         FindRouteButton.Text = "▶ شروع ناوبری";
         FindRouteButton.BackgroundColor = ColorTurquoise;
@@ -847,6 +865,133 @@ public partial class MainPage : ContentPage
             {
                 RecenterButton.IsVisible = false;
             }
+        }
+        else if (e.Url != null && e.Url.StartsWith("koorah://map/click", StringComparison.OrdinalIgnoreCase))
+        {
+            e.Cancel = true;
+            _ = HandleMapClickedLocationAsync(e.Url);
+        }
+    }
+
+    private async Task HandleMapClickedLocationAsync(string url)
+    {
+        try
+        {
+            var queryIndex = url.IndexOf('?');
+            if (queryIndex < 0) return;
+
+            var queryString = url.Substring(queryIndex + 1);
+            var pairs = queryString.Split('&');
+            double? lat = null;
+            double? lon = null;
+
+            foreach (var pair in pairs)
+            {
+                var kv = pair.Split('=');
+                if (kv.Length == 2)
+                {
+                    if (kv[0].Equals("lat", StringComparison.OrdinalIgnoreCase) &&
+                        double.TryParse(kv[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsedLat))
+                    {
+                        lat = parsedLat;
+                    }
+                    else if (kv[0].Equals("lon", StringComparison.OrdinalIgnoreCase) &&
+                        double.TryParse(kv[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsedLon))
+                    {
+                        lon = parsedLon;
+                    }
+                }
+            }
+
+            if (!lat.HasValue || !lon.HasValue) return;
+
+            if (_navState == NavState.Navigating)
+            {
+                await StopNavigationAsync();
+            }
+
+            _endCoord = (lat.Value, lon.Value);
+            SetStatus("دریافت نام موقعیت...", ColorMuted);
+
+            // Reverse geocode to get human-friendly Persian street or place name
+            var placeName = await _geocoding.ReverseGeocodeAsync(lat.Value, lon.Value);
+            _endTitle = !string.IsNullOrWhiteSpace(placeName) ? placeName : $"موقعیت انتخابی ({lat.Value:F4}, {lon.Value:F4})";
+
+            _isProgrammaticTextChange = true;
+            DestinationEntry.Text = _endTitle;
+            ClearDestinationButton.IsVisible = true;
+            SaveDestinationButton.IsEnabled = true;
+            _isProgrammaticTextChange = false;
+
+            try
+            {
+                await MapView.EvaluateJavaScriptAsync($"setDestinationTitle('{EscapeForJs(_endTitle)}');");
+            }
+            catch { }
+
+            // Show bottom route card and find route
+            SetBottomCardVisible(true);
+
+            if (_graph != null)
+            {
+                OnFindRouteClicked(this, EventArgs.Empty);
+            }
+            else
+            {
+                AlgorithmDetailsLabel.Text = "برای مسیریابی کلیک کنید";
+                FindRouteButton.IsEnabled = true;
+                FindRouteButton.Text = "مسیریابی";
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error handling map click: {ex.Message}");
+        }
+    }
+
+    private void SetBottomCardVisible(bool visible)
+    {
+        BottomRouteCard.IsVisible = visible;
+
+        bool hasRouteOrDest = _endCoord.HasValue || _navState == NavState.Navigating || _navState == NavState.RouteCalculated;
+        ExpandRouteCardButton.IsVisible = !visible && hasRouteOrDest;
+
+        if (!visible)
+        {
+            if (_navState == NavState.Navigating)
+            {
+                ExpandRouteCardButton.Text = "🧭 ادامه ناوبری";
+            }
+            else if (_navState == NavState.RouteCalculated)
+            {
+                ExpandRouteCardButton.Text = "🗺️ جزئیات مسیر";
+            }
+            else if (_endCoord.HasValue)
+            {
+                ExpandRouteCardButton.Text = "🚗 مسیریابی";
+            }
+        }
+
+        RecenterButton.Margin = new Thickness(0, 0, 0, visible ? 245 : 30);
+
+        try
+        {
+            _ = MapView.EvaluateJavaScriptAsync($"setBottomCardVisible({(visible ? "true" : "false")});");
+        }
+        catch { }
+    }
+
+    private void OnMinimizeRouteCardClicked(object? sender, EventArgs e)
+    {
+        SetBottomCardVisible(false);
+    }
+
+    private void OnExpandRouteCardClicked(object? sender, EventArgs e)
+    {
+        SetBottomCardVisible(true);
+        if (_navState == NavState.Idle && _endCoord.HasValue && _graph != null)
+        {
+            OnFindRouteClicked(sender, e);
         }
     }
 

@@ -33,17 +33,11 @@ if (initialBest != null)
 }
 Console.WriteLine($"Found initial route with {candidateRouteEdges.Count} edges.");
 
-// 3. Update live traffic for candidate route edges
-Console.WriteLine("\nUpdating live traffic for candidate route edges...");
-string apiKey = LoadApiKey();
-var traffic = new TomTomTrafficProvider(apiKey);
-using var http = new HttpClient();
-
-// e.g. after finding a candidate path, refresh traffic on its edges before trusting the ETA:
-foreach (var edge in candidateRouteEdges)
-{
-    await traffic.UpdateEdgeSpeedAsync(edge, http);
-}
+// 3. Evaluate dynamic Tehran time-of-day traffic model (100% free, offline, instant)
+Console.WriteLine("\nEvaluating 100% Free Tehran Dynamic Traffic Model...");
+var timeTraffic = new TehranTimeTrafficProvider();
+Console.WriteLine($"Current Tehran Traffic Status: {TehranTimeTrafficProvider.GetTrafficStatusDescription()}");
+timeTraffic.ApplyTrafficToGraph(graph);
 
 // 4. Find the best route after traffic updates
 Console.WriteLine("\nEvaluating routes across racing algorithms (Dijkstra, A*, Bidirectional A*)...");
@@ -57,25 +51,3 @@ foreach (var r in all)
 
 Console.WriteLine("\nDone!");
 
-static string LoadApiKey()
-{
-    var envKey = Environment.GetEnvironmentVariable("TOMTOM_API_KEY");
-    if (!string.IsNullOrWhiteSpace(envKey)) return envKey.Trim();
-
-    var candidates = new[] { "secrets.json", @"..\secrets.json", @"..\..\..\secrets.json" };
-    foreach (var path in candidates)
-    {
-        if (File.Exists(path))
-        {
-            try
-            {
-                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
-                if (doc.RootElement.TryGetProperty("TomTomApiKey", out var key))
-                    return key.GetString() ?? "YOUR_API_KEY";
-            }
-            catch { }
-        }
-    }
-
-    return "YOUR_API_KEY";
-}
