@@ -1,8 +1,14 @@
 # KooRah (کوراه) 🧭🚗
 
+[![Download APK](https://img.shields.io/github/v/release/Arshia-HZ/KooRah?label=Download%20APK&color=0D9488&logo=android)](https://github.com/Arshia-HZ/KooRah/releases)
+[![Build & Release](https://github.com/Arshia-HZ/KooRah/actions/workflows/release-apk.yml/badge.svg)](https://github.com/Arshia-HZ/KooRah/actions/workflows/release-apk.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **KooRah** is a high-performance, completely on-device navigation and routing application tailored for **Tehran, Iran**. Built with **.NET 10** and **.NET MAUI**, it features an offline OpenStreetMap road graph parser, three racing pathfinding algorithms, an empirical rush-hour traffic engine, and an interactive 3D vector map.
 
 Everything runs **directly on your device** — no paid APIs, no subscriptions, no backend server, and zero external tracking.
+
+> **📱 Install on Android:** Download the latest ready-to-install `KooRah-*.apk` directly from [GitHub Releases](https://github.com/Arshia-HZ/KooRah/releases).
 
 ---
 
